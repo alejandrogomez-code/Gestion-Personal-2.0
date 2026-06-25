@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mi Organización</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+/* =========================================================================
+   SISTEMA DE DISEÑO v2
+   Layout: sidebar oscuro fijo (desktop) / barra inferior de íconos (mobile).
+   Paleta: crema cálido + acento terracota. Tarjetas blancas muy limpias.
+   Tipografía: Inter (interfaz). Fraunces para títulos grandes.
+   ========================================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap');
+
+:root{
+  /* Forma y sombras (no cambian con el tema) */
+  --r-lg:16px; --r-md:12px; --r-sm:9px;
+  --shadow:0 1px 2px rgba(43,39,34,.04), 0 2px 10px rgba(43,39,34,.04);
+  --shadow-h:0 2px 4px rgba(43,39,34,.05), 0 10px 26px rgba(43,39,34,.08);
+  --font-scale:1;
+
+  /* Estados (constantes en todas las paletas) */
+  --ok:#5f7a52; --ok-bg:#e9efe3;
+  --warn:#b08534; --warn-bg:#f5ecd9;
+  --danger:#b15240; --danger-bg:#f5e2dd;
+  --info:#4d6e80; --info-bg:#e4eef2;
+
+  /* Íconos de módulo */
+  --m1:#e9efe3; --m1i:#5f7a52;
+  --m2:var(--accent-bg); --m2i:var(--accent);
+  --m3:#e6e8ef; --m3i:#5b6494;
+  --m4:#e9eee9; --m4i:#4e7a5c;
+  --m5:#f5ecd9; --m5i:#b08534;
+}
+
+/* =========================================================================
+   PALETAS DE COLOR  (data-theme en <html>)
+   ========================================================================= */
+:root, [data-theme="terracota"]{
+  --bg:#f4f1ea; --surface:#ffffff; --surface-2:#faf8f3;
+  --side:#2b2722; --side-2:#34302a; --side-ink:#cfc8bd; --side-faint:#8c857a;
+  --ink:#2b2722; --ink-soft:#6b645a; --ink-faint:#a39c8f; --line:#e7e2d8;
+  --accent:#b4653e; --accent-d:#9a5232; --accent-bg:#f3e3da;
+}
+[data-theme="oceano"]{
+  --bg:#eef2f5; --surface:#ffffff; --surface-2:#f6f9fb;
+  --side:#1e2a33; --side-2:#28353f; --side-ink:#c2ccd3; --side-faint:#7c8893;
+  --ink:#1e2a33; --ink-soft:#5a6770; --ink-faint:#97a3ab; --line:#dde5ea;
+  --accent:#2d7d9a; --accent-d:#236478; --accent-bg:#d9ebf1;
+}
+[data-theme="bosque"]{
+  --bg:#eef1ec; --surface:#ffffff; --surface-2:#f6f8f4;
+  --side:#222a23; --side-2:#2c352d; --side-ink:#c4ccc4; --side-faint:#7e887e;
+  --ink:#222a23; --ink-soft:#586057; --ink-faint:#98a097; --line:#e0e5dd;
+  --accent:#4e7a5c; --accent-d:#3e6449; --accent-bg:#e0ece2;
+}
+[data-theme="violeta"]{
+  --bg:#f1eef5; --surface:#ffffff; --surface-2:#f8f6fb;
+  --side:#28232f; --side-2:#322c3a; --side-ink:#ccc6d3; --side-faint:#857e8e;
+  --ink:#28232f; --ink-soft:#615a6b; --ink-faint:#9f98a8; --line:#e5e0ea;
+  --accent:#6d5b9e; --accent-d:#594980; --accent-bg:#e7e0f0;
+}
+[data-theme="grafito"]{
+  --bg:#eef0f1; --surface:#ffffff; --surface-2:#f7f8f9;
+  --side:#23262a; --side-2:#2d3034; --side-ink:#c6cacd; --side-faint:#7e8388;
+  --ink:#23262a; --ink-soft:#585d62; --ink-faint:#989da2; --line:#e0e3e5;
+  --accent:#566270; --accent-d:#454f5a; --accent-bg:#e2e5e9;
+}
+[data-theme="noche"]{
+  --bg:#1a1d21; --surface:#23272d; --surface-2:#1f2329;
+  --side:#15171a; --side-2:#23272d; --side-ink:#aeb4bb; --side-faint:#6b7178;
+  --ink:#e6e9ec; --ink-soft:#aab0b7; --ink-faint:#737a82; --line:#323840;
+  --accent:#d08a5e; --accent-d:#b9774e; --accent-bg:#3a2f28;
+  --ok-bg:#26302450; --warn-bg:#34301f50; --danger-bg:#33252150; --info-bg:#22303650;
+  --m1:#26302480; --m3:#2a2e3a80; --m4:#26302a80; --m5:#34301f80;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:calc(16px * var(--font-scale))}
+body{
+  font-family:'Inter',system-ui,sans-serif;
+  background:var(--bg);color:var(--ink);line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* =========================================================================
+   ESTRUCTURA: app-shell con sidebar + main
+   ========================================================================= */
+.app{display:flex;min-height:100vh}
+
+/* ---- Sidebar (desktop) ---- */
+.sidebar{
+  width:236px;flex-shrink:0;background:var(--side);color:var(--side-ink);
+  display:flex;flex-direction:column;
+  position:sticky;top:0;height:100vh;padding:18px 14px;
+}
+.side-brand{display:flex;align-items:center;gap:11px;padding:6px 8px 18px}
+.side-brand .logo{
+  width:38px;height:38px;border-radius:11px;background:var(--accent);
+  display:flex;align-items:center;justify-content:center;color:#fff;
+  font-family:'Fraunces',serif;font-weight:600;font-size:19px;flex-shrink:0;
+}
+.side-brand .bt{font-weight:600;color:#fff;font-size:15px;line-height:1.2}
+.side-brand .bs{font-size:12px;color:var(--side-faint)}
+
+.nav{display:flex;flex-direction:column;gap:2px;margin-top:6px}
+.nav-item{
+  display:flex;align-items:center;gap:11px;
+  padding:10px 11px;border-radius:9px;cursor:pointer;
+  color:var(--side-ink);font-size:14px;font-weight:500;
+  background:none;border:none;text-align:left;width:100%;transition:.14s;
+}
+.nav-item svg{width:18px;height:18px;stroke:currentColor;stroke-width:1.8;flex-shrink:0}
+.nav-item:hover{background:var(--side-2);color:#fff}
+.nav-item.active{background:var(--accent);color:#fff}
+.nav-sep{height:1px;background:#403b34;margin:10px 6px}
+
+.side-foot{margin-top:auto;padding:10px 8px 4px;border-top:1px solid #403b34}
+.side-foot .em{font-size:12px;color:var(--side-faint);word-break:break-all}
+
+/* ---- Main ---- */
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{
+  height:62px;display:flex;align-items:center;gap:14px;
+  padding:0 26px;border-bottom:1px solid var(--line);
+  background:var(--surface);position:sticky;top:0;z-index:30;
+}
+.topbar .tb-title{font-size:15px;color:var(--ink-soft);font-weight:500}
+.font-ctl{margin-left:auto;display:flex;align-items:center;gap:7px}
+.font-ctl span{font-size:12px;color:var(--ink-faint)}
+.font-ctl button{
+  width:30px;height:30px;border:1px solid var(--line);background:var(--surface);
+  border-radius:8px;cursor:pointer;color:var(--ink-soft);font-size:13px;font-weight:600;transition:.14s;
+}
+.font-ctl button:hover{background:var(--surface-2);border-color:var(--accent);color:var(--accent)}
+
+/* Selector de paletas */
+.theme-ctl{position:relative}
+.theme-btn{width:30px;height:30px;border:1px solid var(--line);background:var(--surface);border-radius:8px;cursor:pointer;color:var(--ink-soft);display:flex;align-items:center;justify-content:center;transition:.14s}
+.theme-btn svg{width:16px;height:16px}
+.theme-btn:hover{border-color:var(--accent);color:var(--accent)}
+.theme-menu{
+  position:absolute;right:0;top:38px;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-md);box-shadow:var(--shadow-h);padding:8px;z-index:60;
+  display:none;grid-template-columns:repeat(2,1fr);gap:6px;width:200px;
+}
+.theme-menu.show{display:grid}
+.theme-opt{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;cursor:pointer;border:1px solid transparent;background:none;font-size:12.5px;font-weight:500;color:var(--ink-soft);transition:.12s}
+.theme-opt:hover{background:var(--surface-2)}
+.theme-opt.active{border-color:var(--accent);color:var(--ink)}
+.theme-dot{width:16px;height:16px;border-radius:5px;flex-shrink:0;border:1px solid rgba(0,0,0,.08)}
+
+/* Tabla de recordatorios (vista columnas) */
+.rec-row td{vertical-align:middle}
+.rec-row .rec-task{color:var(--ink);font-weight:600;font-size:13.5px}
+.rec-row .rec-obs{color:var(--ink-faint);font-size:12px;margin-top:1px}
+.rec-actions{display:flex;gap:6px;justify-content:flex-end}
+.archived-link{font-size:13px;color:var(--accent);font-weight:600;cursor:pointer;background:none;border:none;padding:0}
+.archived-link:hover{text-decoration:underline}
+
+.content{padding:26px;flex:1;max-width:1180px;width:100%}
+
+/* =========================================================================
+   DASHBOARD
+   ========================================================================= */
+.page-head{margin-bottom:22px}
+.page-head h1{font-family:'Fraunces',serif;font-weight:600;font-size:27px;letter-spacing:-.4px}
+.page-head p{color:var(--ink-soft);font-size:14px;margin-top:4px}
+
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.7px;color:var(--ink-faint);text-transform:uppercase;margin:4px 0 12px}
+
+/* Banner superior (próximo / destacado) */
+.banner{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:18px 20px;box-shadow:var(--shadow);margin-bottom:24px;
+  display:flex;gap:16px;align-items:flex-start;
+}
+.banner .date-chip{
+  background:var(--accent-bg);color:var(--accent-d);border-radius:12px;
+  width:54px;height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;
+}
+.banner .date-chip b{font-family:'Fraunces',serif;font-size:21px;line-height:1}
+.banner .date-chip span{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-top:2px}
+.banner .b-body h3{font-size:15px;font-weight:600}
+.banner .b-body p{font-size:13px;color:var(--ink-soft);margin-top:2px}
+.banner .b-body .b-meta{font-size:12px;color:var(--ink-faint);margin-top:7px}
+
+/* Grilla de módulos */
+.module-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+.module-card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:18px;cursor:pointer;text-align:left;transition:.16s;box-shadow:var(--shadow);
+  display:flex;flex-direction:column;gap:14px;min-height:128px;
+}
+.module-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-h);border-color:#ddd6c9}
+.module-icon{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center}
+.module-icon svg{width:21px;height:21px;stroke-width:1.9}
+.module-card h3{font-size:15px;font-weight:600}
+.module-card .mc-meta{font-size:12.5px;color:var(--ink-faint);margin-top:3px}
+.module-card .mc-meta b{color:var(--ink-soft);font-weight:600}
+.tag-soon{font-size:10.5px;font-weight:600;color:var(--ink-faint);background:var(--surface-2);
+  border:1px solid var(--line);padding:2px 8px;border-radius:999px;align-self:flex-start}
+
+/* =========================================================================
+   COMPONENTES (reusados de v1)
+   ========================================================================= */
+.stat-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));margin-bottom:20px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:15px;box-shadow:var(--shadow)}
+.stat .label{font-size:12px;color:var(--ink-faint);font-weight:500}
+.stat .value{font-family:'Fraunces',serif;font-size:24px;font-weight:600;margin-top:3px;letter-spacing:-.4px}
+.stat .value small{font-size:13px;color:var(--ink-soft);font-weight:500;font-family:'Inter'}
+
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:18px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{white-space:nowrap;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);
+  font-size:13.5px;font-weight:500;padding:8px 15px;border-radius:999px;cursor:pointer;transition:.14s}
+.tab.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:18px;box-shadow:var(--shadow);margin-bottom:16px}
+.panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px}
+.panel-head h2{font-size:15.5px;font-weight:600}
+.panel-head h2 .sub{display:block;font-size:12px;color:var(--ink-faint);font-weight:400;margin-top:1px}
+
+.btn{display:inline-flex;align-items:center;gap:6px;justify-content:center;background:var(--accent);color:#fff;
+  border:none;font-size:13.5px;font-weight:600;font-family:inherit;padding:9px 15px;border-radius:var(--r-sm);cursor:pointer;transition:.14s}
+.btn:hover{background:var(--accent-d)}
+.btn svg{width:15px;height:15px;stroke:#fff;stroke-width:2.2}
+.btn.ghost{background:var(--surface);color:var(--ink-soft);border:1px solid var(--line)}
+.btn.ghost:hover{background:var(--surface-2);color:var(--ink)}
+.btn.ghost svg{stroke:var(--ink-soft)}
+.btn.sm{padding:6px 11px;font-size:12.5px}
+.btn.danger{background:transparent;color:var(--danger);border:1px solid transparent;padding:6px 9px}
+.btn.danger:hover{background:var(--danger-bg)}
+
+.list{display:flex;flex-direction:column;gap:10px}
+.item{border:1px solid var(--line);border-radius:var(--r-sm);padding:13px 14px;background:var(--surface-2)}
+.item .it-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.item .it-title{font-weight:600;font-size:14.5px}
+.item .it-desc{font-size:13px;color:var(--ink-soft);margin-top:2px}
+.item .it-meta{font-size:12px;color:var(--ink-faint);margin-top:6px;display:flex;flex-wrap:wrap;gap:10px}
+
+.chip{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.chip.ok{background:var(--ok-bg);color:var(--ok)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.danger{background:var(--danger-bg);color:var(--danger)}
+.chip.info{background:var(--info-bg);color:var(--info)}
+.chip.muted{background:var(--surface);color:var(--ink-faint);border:1px solid var(--line)}
+
+.progress{height:8px;background:var(--line);border-radius:999px;overflow:hidden;margin-top:10px}
+.progress>span{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .35s ease}
+.progress.full>span{background:var(--ok)}
+
+.checks{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.check{width:38px;height:38px;border-radius:11px;border:1.5px solid var(--line);background:var(--surface);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--ink-faint);transition:.14s}
+.check:hover{border-color:var(--accent)}
+.check.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.check.on svg{width:18px;height:18px;stroke:#fff;stroke-width:2.5}
+
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:420px}
+th{text-align:left;font-weight:600;color:var(--ink-faint);font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:10px;border-bottom:1px solid var(--line);color:var(--ink-soft)}
+td.strong{color:var(--ink);font-weight:500}
+tr:last-child td{border-bottom:none}
+
+.empty{text-align:center;padding:30px 14px;color:var(--ink-faint);font-size:14px}
+
+.overlay{position:fixed;inset:0;z-index:100;background:rgba(43,39,34,.34);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:16px}
+.overlay.show{display:flex}
+.modal{background:var(--surface);width:100%;max-width:520px;border-radius:18px;padding:22px 20px 24px;max-height:90vh;overflow-y:auto;animation:pop .2s ease}
+@keyframes pop{from{transform:translateY(12px);opacity:.7}to{transform:translateY(0);opacity:1}}
+.modal h2{font-family:'Fraunces',serif;font-size:20px;font-weight:600;margin-bottom:4px}
+.modal .modal-sub{color:var(--ink-soft);font-size:13.5px;margin-bottom:18px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:5px}
+.field input,.field select,.field textarea{width:100%;font-family:inherit;font-size:14.5px;color:var(--ink);
+  background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:11px 12px;transition:.14s}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3px var(--accent-bg)}
+.field textarea{resize:vertical;min-height:62px}
+.field-row{display:flex;gap:12px}
+.field-row .field{flex:1}
+.modal-actions{display:flex;gap:10px;margin-top:8px}
+.modal-actions .btn{flex:1;padding:12px}
+
+.view{display:none}
+.view.active{display:block}
+
+/* ---- Barra inferior de íconos (mobile) ---- */
+.mobile-nav{display:none}
+
+/* =========================================================================
+   RESPONSIVE
+   ========================================================================= */
+@media(max-width:760px){
+  .sidebar{display:none}
+  .content{padding:18px 16px 88px}     /* espacio para barra inferior */
+  .topbar{padding:0 16px}
+  .page-head h1{font-size:23px}
+  .mobile-nav{
+    display:flex;position:fixed;bottom:0;left:0;right:0;z-index:40;
+    background:var(--side);padding:8px 6px;justify-content:space-around;
+    box-shadow:0 -4px 20px rgba(43,39,34,.18);
+  }
+  .mn-item{
+    background:none;border:none;cursor:pointer;color:var(--side-faint);
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    font-size:10px;font-weight:500;padding:5px 6px;border-radius:10px;flex:1;transition:.14s;
+  }
+  .mn-item svg{width:21px;height:21px;stroke:currentColor;stroke-width:1.8}
+  .mn-item.active{color:#fff}
+  .mn-item.active svg{stroke:var(--accent)}
+}
+
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---- Login ---- */
+.auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg)}
+.auth-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-h);padding:30px 26px;width:100%;max-width:380px}
+.auth-card .logo{width:46px;height:46px;border-radius:13px;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Fraunces',serif;font-weight:600;font-size:23px;margin-bottom:16px}
+.auth-card h1{font-family:'Fraunces',serif;font-size:24px;font-weight:600;letter-spacing:-.4px}
+.auth-card .sub{color:var(--ink-soft);font-size:14px;margin:4px 0 22px}
+.auth-tabs{display:flex;gap:6px;margin-bottom:18px}
+.auth-tab{flex:1;padding:9px;border:1px solid var(--line);background:var(--surface-2);border-radius:var(--r-sm);font-family:inherit;font-size:13.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;transition:.14s}
+.auth-tab.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.auth-msg{font-size:13px;margin-top:12px;padding:10px 12px;border-radius:var(--r-sm);display:none}
+.auth-msg.err{display:block;background:var(--danger-bg);color:var(--danger)}
+.auth-msg.ok{display:block;background:var(--ok-bg);color:var(--ok)}
+.loading{display:flex;align-items:center;justify-content:center;min-height:100vh;color:var(--ink-faint);font-size:14px}
+.app{display:none}
+body.authed .app{display:flex}
+.logout-btn{background:none;border:none;color:var(--side-faint);font-size:12px;cursor:pointer;margin-top:8px;padding:4px 0;text-align:left}
+.logout-btn:hover{color:#fff}
+</style>
+</head>
+<body>
+
+<!-- ============ LOADER inicial ============ -->
+<div class="loading" id="loader">Cargando…</div>
+
+<!-- ============ LOGIN ============ -->
+<div class="auth-screen" id="authScreen" style="display:none">
+  <div class="auth-card">
+    <div class="logo">O</div>
+    <h1>Mi Organización</h1>
+    <p class="sub">Ingresá para acceder a tu espacio personal.</p>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="setAuthMode('login')">Ingresar</button>
+      <button class="auth-tab" id="tabSignup" onclick="setAuthMode('signup')">Crear cuenta</button>
+    </div>
+    <div class="field"><label>Email</label><input id="authEmail" type="email" placeholder="tu@email.com" autocomplete="email"></div>
+    <div class="field"><label>Contraseña</label><input id="authPass" type="password" placeholder="••••••••" autocomplete="current-password"></div>
+    <button class="btn" id="authSubmit" style="width:100%;padding:12px;margin-top:4px" onclick="doAuth()">Ingresar</button>
+    <div class="auth-msg" id="authMsg"></div>
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar">
+    <div class="side-brand">
+      <div class="logo">O</div>
+      <div><div class="bt">Mi Organización</div><div class="bs">Espacio personal</div></div>
+    </div>
+    <nav class="nav" id="sideNav"></nav>
+    <div class="side-foot">
+      <div class="em" id="sideEmail"></div>
+      <button class="logout-btn" onclick="doLogout()">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main">
+    <div class="topbar">
+      <span class="tb-title" id="tbTitle">Dashboard</span>
+      <div class="font-ctl">
+        <span>Texto</span>
+        <button onclick="setFont(-1)" title="Más chico">A−</button>
+        <button onclick="setFont(0)" title="Normal" style="font-size:15px">A</button>
+        <button onclick="setFont(1)" title="Más grande" style="font-size:17px">A+</button>
+        <div class="theme-ctl">
+          <button class="theme-btn" onclick="toggleThemeMenu(event)" title="Paleta de colores">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><path d="M12 2a10 10 0 0 0 0 20c1 0 1.5-.7 1.5-1.5 0-.4-.2-.8-.5-1.1-.3-.3-.5-.7-.5-1.1 0-.8.7-1.3 1.5-1.3H16a6 6 0 0 0 6-6c0-5-4.5-8-10-8z"/></svg>
+          </button>
+          <div class="theme-menu" id="themeMenu"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <section id="view-dashboard" class="view active">
+        <div class="page-head"><h1>Hola, Alejandro</h1><p>Tu día, ordenado. Elegí una sección para empezar.</p></div>
+
+        <div class="banner">
+          <div class="date-chip"><b id="bnDay">—</b><span id="bnMon"></span></div>
+          <div class="b-body">
+            <h3 id="bnTitle">Sin recordatorios próximos</h3>
+            <p id="bnSub"></p>
+            <div class="b-meta" id="bnMeta"></div>
+          </div>
+        </div>
+
+        <div class="eyebrow">Secciones</div>
+        <div class="module-grid" id="moduleGrid"></div>
+      </section>
+
+      <!-- OBJETIVOS -->
+      <section id="view-objetivos" class="view">
+        <div class="page-head"><h1>Objetivos</h1><p>Metas personales con seguimiento de avance.</p></div>
+        <div class="panel-head" id="objHead" style="margin-bottom:16px"></div>
+        <div id="objetivosList" class="list"></div>
+      </section>
+
+      <!-- HÁBITOS -->
+      <section id="view-habitos" class="view">
+        <div class="page-head"><h1>Buenos hábitos</h1><p>Actividad física, peso e IMC, y lectura.</p></div>
+        <div class="tabs" id="habitosTabs">
+          <button class="tab active" onclick="switchHabito('actividad',this)">Actividad física</button>
+          <button class="tab" onclick="switchHabito('peso',this)">Peso e IMC</button>
+          <button class="tab" onclick="switchHabito('lectura',this)">Lectura</button>
+        </div>
+        <div id="hab-actividad" class="hab-sub"></div>
+        <div id="hab-peso" class="hab-sub" style="display:none"></div>
+        <div id="hab-lectura" class="hab-sub" style="display:none"></div>
+      </section>
+
+      <!-- TRABAJO -->
+      <section id="view-trabajo" class="view">
+        <div class="page-head"><h1>Trabajo</h1><p>Módulo base — lo desarrollamos más adelante.</p></div>
+        <div class="stat-grid" id="trabajoStats"></div>
+        <div id="trabajoPanels"></div>
+      </section>
+
+      <!-- TENIS -->
+      <section id="view-tenis" class="view">
+        <div class="page-head"><h1>Tenis</h1><p>Registro de partidos y efectividad.</p></div>
+        <div class="stat-grid" id="tenisStats"></div>
+        <div class="panel"><div class="panel-head"><h2>Partidos</h2>
+          <button class="btn sm" onclick="openPartido()"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14"/></svg>Nuevo</button></div>
+          <div class="tbl-wrap"><table id="tenisTable"></table></div></div>
+      </section>
+
+      <!-- RECORDATORIOS -->
+      <section id="view-recordatorios" class="view">
+        <div class="page-head"><h1>Recordatorios</h1><p>Lo que no se te puede pasar.</p></div>
+        <div class="stat-grid" id="recStats"></div>
+        <div class="panel">
+          <div class="panel-head"><h2>Lista</h2>
+            <button class="btn sm" onclick="openRecordatorio()"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14"/></svg>Nuevo</button></div>
+          <div class="tbl-wrap"><table id="recTable"></table></div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============ BARRA INFERIOR (mobile) ============ -->
+<nav class="mobile-nav" id="mobileNav"></nav>
+
+<!-- ============ MODAL ============ -->
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal"></div>
+</div>
+
+<script>
+/* =========================================================================
+   MI ORGANIZACIÓN v2 — sidebar oscuro + crema/terracota
+   Misma lógica validada; cambia sólo navegación y dashboard.
+   ========================================================================= */
+
+const STORE_KEY='mi_organizacion_v1';
+const ESTATURA=1.78;
+
+const $=s=>document.querySelector(s);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const hoy=()=>new Date().toISOString().slice(0,10);
+function nMoney(n){return '$'+(n||0).toLocaleString('es-AR')}
+function nNum(n,dec=0){return Number(n||0).toLocaleString('es-AR',{minimumFractionDigits:dec,maximumFractionDigits:dec})}
+function fecha(d){if(!d)return '—';const[y,m,dd]=d.split('-');return `${dd}/${m}/${y}`}
+function clamp(n){return Math.max(0,Math.min(100,Math.round(n)))}
+function clone(o){return JSON.parse(JSON.stringify(o))}
+
+/* =========================================================================
+   SUPABASE — configuración
+   Reemplazá estos dos valores por los de tu proyecto:
+   Supabase → Project Settings → API → "Project URL" y "anon public key".
+   La anon key es pública por diseño; la seguridad la da RLS.
+   ========================================================================= */
+const SUPABASE_URL  = 'https://TU-PROYECTO.supabase.co';
+const SUPABASE_ANON = 'TU-ANON-KEY';
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let USER = null;
+let DB = emptyDB();   // caché en memoria; misma forma que usaba la maqueta
+function emptyDB(){
+  return {objetivos:[],actividad:[],peso:[],lectura:[],tenis:[],
+    tenisOpc:{torneos:[],categorias:[],contrincantes:[]},
+    recordatorios:[],trabajo:{tareas:[],proyectos:[],ideas:[],pendientes:[]}};
+}
+
+/* ---------- save(): no-op de compatibilidad ----------
+   La maqueta llamaba save() tras mutar DB. Ahora cada operación escribe
+   directo en Supabase mediante los helpers db*(). save() queda como
+   no-op para no romper llamadas existentes. */
+function save(){}
+
+/* =========================================================================
+   HIDRATACIÓN — traer todo lo del usuario y armar el caché DB
+   ========================================================================= */
+async function hydrate(){
+  const [obj,car,act,pes,lec,ten,opc,tra,rec] = await Promise.all([
+    sb.from('objetivos').select('*').order('creado_en',{ascending:false}),
+    sb.from('objetivo_cargas').select('*').order('fecha',{ascending:true}),
+    sb.from('actividad').select('*').order('fecha',{ascending:false}),
+    sb.from('peso').select('*').order('fecha',{ascending:true}),
+    sb.from('lectura').select('*').order('creado_en',{ascending:false}),
+    sb.from('tenis').select('*').order('fecha',{ascending:false}),
+    sb.from('tenis_opciones').select('*'),
+    sb.from('trabajo_items').select('*').order('creado_en',{ascending:false}),
+    sb.from('recordatorios').select('*').order('creado_en',{ascending:false}),
+  ]);
+  for(const r of [obj,car,act,pes,lec,ten,opc,tra,rec]){
+    if(r.error){ console.error(r.error); }
+  }
+  DB = emptyDB();
+  // Objetivos (+ mapear nombres de columnas a las claves que usa el render)
+  DB.objetivos = (obj.data||[]).map(o=>({
+    id:o.id, nombre:o.nombre, desc:o.descripcion, tipo:o.tipo,
+    inicio:o.inicio, limite:o.limite, meta:Number(o.meta),
+    checks:o.checks||[], pct:o.pct_manual||0, archivado:o.archivado,
+    cargas:(car.data||[]).filter(c=>c.objetivo_id===o.id)
+              .map(c=>({id:c.id,fecha:c.fecha,monto:Number(c.monto)}))
+  }));
+  DB.actividad     = (act.data||[]).map(a=>({id:a.id,fecha:a.fecha,gym:a.gym,pasos:a.pasos,tenis:a.tenis,obs:a.obs||''}));
+  DB.peso          = (pes.data||[]).map(p=>({id:p.id,fecha:p.fecha,peso:Number(p.peso),cintura:Number(p.cintura)}));
+  DB.lectura       = (lec.data||[]).map(l=>({id:l.id,titulo:l.titulo,autor:l.autor||'',inicio:l.inicio,fin:l.fin||'',estado:l.estado,puntaje:l.puntaje,detalle:l.detalle||''}));
+  DB.tenis         = (ten.data||[]).map(t=>({id:t.id,fecha:t.fecha,torneo:t.torneo||'',categoria:t.categoria||'',estado:t.estado,resultado:t.resultado||'',contrincante:t.contrincante||'',obs:t.obs||''}));
+  DB.recordatorios = (rec.data||[]).map(r=>({id:r.id,tarea:r.tarea,venc:r.venc,estado:r.estado,obs:r.obs||''}));
+  // Opciones de tenis
+  const op=DB.tenisOpc;
+  (opc.data||[]).forEach(o=>{ if(o.tipo==='torneo')op.torneos.push(o.valor); else if(o.tipo==='categoria')op.categorias.push(o.valor); else if(o.tipo==='contrincante')op.contrincantes.push(o.valor); });
+  // Trabajo
+  (tra.data||[]).forEach(i=>{ if(DB.trabajo[i.categoria]) DB.trabajo[i.categoria].push({id:i.id,txt:i.texto}); });
+}
+
+/* =========================================================================
+   HELPERS de escritura en Supabase (insert/update/delete)
+   Devuelven la fila creada cuando hace falta el id.
+   ========================================================================= */
+async function dbInsert(tabla,row){
+  const {data,error}=await sb.from(tabla).insert(row).select().single();
+  if(error){alert('Error al guardar: '+error.message);throw error}
+  return data;
+}
+async function dbUpdate(tabla,id,patch){
+  const {error}=await sb.from(tabla).update(patch).eq('id',id);
+  if(error){alert('Error al actualizar: '+error.message);throw error}
+}
+async function dbDelete(tabla,id){
+  const {error}=await sb.from(tabla).delete().eq('id',id);
+  if(error){alert('Error al eliminar: '+error.message);throw error}
+}
+
+/* ---------- Tamaño de fuente (persistido en user_settings + espejo local) ---------- */
+const FONT_STEPS=[0.9,1,1.12];
+let curFont=Number(localStorage.getItem('font_scale')||1);
+function setFont(dir){
+  let idx=dir===0?1:FONT_STEPS.indexOf(curFont)+dir;
+  idx=Math.max(0,Math.min(FONT_STEPS.length-1,idx));
+  curFont=FONT_STEPS[idx];
+  document.documentElement.style.setProperty('--font-scale',curFont);
+  localStorage.setItem('font_scale',curFont);
+  if(USER) sb.from('user_settings').update({font_scale:curFont,actualizado:new Date().toISOString()}).eq('user_id',USER.id).then(()=>{});
+}
+(function(){const v=localStorage.getItem('font_scale');if(v)document.documentElement.style.setProperty('--font-scale',v)})();
+
+/* ---------- Paletas de color (persistido en user_settings + espejo local) ---------- */
+const THEMES=[
+  {id:'terracota',n:'Terracota',c:'#b4653e'},
+  {id:'oceano',   n:'Océano',   c:'#2d7d9a'},
+  {id:'bosque',   n:'Bosque',   c:'#4e7a5c'},
+  {id:'violeta',  n:'Violeta',  c:'#6d5b9e'},
+  {id:'grafito',  n:'Grafito',  c:'#566270'},
+  {id:'noche',    n:'Noche',    c:'#d08a5e'},
+];
+function applyTheme(id){
+  document.documentElement.setAttribute('data-theme',id);
+  localStorage.setItem('theme',id);
+  renderThemeMenu();
+  if(typeof pesoChartRef!=='undefined'&&pesoChartRef)drawPesoChart();
+  if(USER) sb.from('user_settings').update({tema:id,actualizado:new Date().toISOString()}).eq('user_id',USER.id).then(()=>{});
+}
+function renderThemeMenu(){
+  const cur=localStorage.getItem('theme')||'terracota';
+  $('#themeMenu').innerHTML=THEMES.map(t=>`<button class="theme-opt ${t.id===cur?'active':''}" onclick="applyTheme('${t.id}')"><span class="theme-dot" style="background:${t.c}"></span>${t.n}</button>`).join('');
+}
+function toggleThemeMenu(e){e.stopPropagation();$('#themeMenu').classList.toggle('show')}
+document.addEventListener('click',()=>$('#themeMenu')?.classList.remove('show'));
+(function(){const t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t)})();
+
+/* ---------- Cargar preferencias del usuario desde la base ---------- */
+async function loadSettings(){
+  const {data}=await sb.from('user_settings').select('tema,font_scale').eq('user_id',USER.id).maybeSingle();
+  if(data){
+    if(data.tema){document.documentElement.setAttribute('data-theme',data.tema);localStorage.setItem('theme',data.tema)}
+    if(data.font_scale){curFont=Number(data.font_scale);document.documentElement.style.setProperty('--font-scale',curFont);localStorage.setItem('font_scale',curFont)}
+  }
+  renderThemeMenu();
+}
+
+/* =========================================================================
+   NAVEGACIÓN — sidebar + barra inferior
+   ========================================================================= */
+function iconWrap(p){return `<svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`}
+const iHome  = iconWrap('<path d="M3 11l9-8 9 8M5 10v10h14V10"/>');
+const iTarget= iconWrap('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>');
+const iHeart = iconWrap('<path d="M20.8 5.6a5.5 5.5 0 0 0-7.8 0L12 6.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 22l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/>');
+const iBrief = iconWrap('<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/>');
+const iTennis= iconWrap('<circle cx="12" cy="12" r="9"/><path d="M5 5c4 3 4 11 0 14M19 5c-4 3-4 11 0 14"/>');
+const iBell  = iconWrap('<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>');
+
+const MODULES=[
+  {id:'objetivos',   t:'Objetivos',     icon:iTarget, mvar:'m1',
+    meta:()=>`<b>${DB.objetivos.filter(o=>!o.archivado).length}</b> en seguimiento`},
+  {id:'habitos',     t:'Buenos hábitos',icon:iHeart,  mvar:'m2',
+    meta:()=>`<b>${DB.actividad.length}</b> registros de actividad`},
+  {id:'trabajo',     t:'Trabajo',       icon:iBrief,  mvar:'m3', soon:true,
+    meta:()=>'Módulo base'},
+  {id:'tenis',       t:'Tenis',         icon:iTennis, mvar:'m4',
+    meta:()=>`<b>${DB.tenis.length}</b> partidos`},
+  {id:'recordatorios',t:'Recordatorios',icon:iBell,   mvar:'m5',
+    meta:()=>`<b>${DB.recordatorios.filter(r=>r.estado!=='completado').length}</b> activos`},
+];
+
+let current='dashboard';
+
+function renderNav(){
+  // Sidebar
+  $('#sideNav').innerHTML =
+    `<button class="nav-item ${current==='dashboard'?'active':''}" onclick="go('dashboard')">${iHome}Dashboard</button>
+     <div class="nav-sep"></div>` +
+    MODULES.map(m=>`<button class="nav-item ${current===m.id?'active':''}" onclick="go('${m.id}')">${m.icon}${m.t}</button>`).join('');
+  // Mobile (dashboard + 4 más relevantes; "trabajo" queda en el menú via dashboard)
+  const mob=[{id:'dashboard',t:'Inicio',icon:iHome},...MODULES.filter(m=>m.id!=='trabajo')];
+  $('#mobileNav').innerHTML = mob.map(m=>
+    `<button class="mn-item ${current===m.id?'active':''}" onclick="go('${m.id}')">${m.icon}<span>${m.t}</span></button>`).join('');
+}
+
+function go(id){
+  current=id;
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  $('#view-'+id).classList.add('active');
+  $('#tbTitle').textContent = id==='dashboard'?'Dashboard':(MODULES.find(m=>m.id===id)?.t||'');
+  document.querySelector('.content').scrollTop=0; window.scrollTo(0,0);
+  renderNav();
+  if(id==='dashboard') renderDashboard();
+  else RENDER[id] && RENDER[id]();
+}
+
+/* =========================================================================
+   DASHBOARD
+   ========================================================================= */
+function renderDashboard(){
+  // Banner: próximo recordatorio activo
+  const prox = DB.recordatorios.filter(r=>r.estado!=='completado' && r.venc)
+    .sort((a,b)=>a.venc<b.venc?-1:1)[0];
+  if(prox){
+    const [y,m,d]=prox.venc.split('-');
+    const meses=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+    $('#bnDay').textContent=d; $('#bnMon').textContent=meses[+m-1];
+    $('#bnTitle').textContent=prox.tarea;
+    $('#bnSub').textContent=prox.obs||'Recordatorio próximo';
+    $('#bnMeta').textContent='Vence: '+fecha(prox.venc);
+  }else{
+    $('#bnDay').textContent='—'; $('#bnMon').textContent='';
+    $('#bnTitle').textContent='Sin recordatorios próximos';
+    $('#bnSub').textContent='Estás al día.'; $('#bnMeta').textContent='';
+  }
+  // Tarjetas de módulo
+  $('#moduleGrid').innerHTML = MODULES.map(m=>`
+    <button class="module-card" onclick="go('${m.id}')">
+      <div class="module-icon" style="background:var(--${m.mvar})">
+        <span style="display:flex;color:var(--${m.mvar}i)">${m.icon}</span>
+      </div>
+      <div><h3>${m.t}</h3><div class="mc-meta">${m.meta()}</div></div>
+      ${m.soon?'<span class="tag-soon">En construcción</span>':''}
+    </button>`).join('');
+}
+
+/* =========================================================================
+   MODAL
+   ========================================================================= */
+function openModal(html){$('#modal').innerHTML=html;$('#overlay').classList.add('show')}
+function closeModal(){$('#overlay').classList.remove('show')}
+
+/* =========================================================================
+   1) OBJETIVOS
+   ========================================================================= */
+function objetivoProgreso(o){
+  if(o.tipo==='monto'){const tot=(o.cargas||[]).reduce((a,c)=>a+Number(c.monto),0);return{pct:clamp(tot/o.meta*100),info:`${nMoney(tot)} de ${nMoney(o.meta)}`,tot}}
+  if(o.tipo==='conteo'){const h=(o.checks||[]).filter(Boolean).length;return{pct:clamp(h/o.meta*100),info:`${h} de ${o.meta} cumplidos`,hechos:h}}
+  return{pct:o.pct||0,info:o.desc||''}
+}
+function estadoObjetivo(p){return p>=100?'Cumplido':p>0?'En Proceso':'Pendiente'}
+let verArchivados=false;
+function objetivoCard(o,arch){
+  const p=objetivoProgreso(o),est=estadoObjetivo(p.pct);
+  const chip=est==='Cumplido'?'ok':est==='En Proceso'?'info':'muted';
+  let extra='';
+  if(!arch){
+    if(o.tipo==='conteo'){
+      extra=`<div class="checks">${o.checks.map((c,i)=>`<div class="check ${c?'on':''}" onclick="toggleCheck('${o.id}',${i})">${c?'<svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>':(i+1)}</div>`).join('')}</div>`;
+    }else if(o.tipo==='monto'){
+      extra=`<div class="it-meta" style="margin-top:10px"><span>Ahorrado: <strong style="color:var(--ink)">${nMoney(p.tot)}</strong></span><span>Meta: ${nMoney(o.meta)}</span></div>
+      <button class="btn ghost sm" style="margin-top:10px" onclick="openCarga('${o.id}')">+ Cargar importe</button>
+      ${(o.cargas&&o.cargas.length)?`<div class="tbl-wrap" style="margin-top:10px"><table><tr><th>Fecha</th><th>Importe</th><th></th></tr>${o.cargas.map(c=>`<tr><td>${fecha(c.fecha)}</td><td class="strong">${nMoney(c.monto)}</td><td style="text-align:right"><button class="btn danger sm" onclick="delCarga('${o.id}','${c.id}')">Quitar</button></td></tr>`).join('')}</table></div>`:''}`;
+    }
+  }
+  const acciones = arch
+    ? `<div style="margin-top:12px;display:flex;gap:8px"><button class="btn ghost sm" onclick="desarchivar('${o.id}')">Restaurar</button><button class="btn danger sm" onclick="delObjetivo('${o.id}')">Eliminar</button></div>`
+    : `<div style="margin-top:12px;display:flex;gap:8px"><button class="btn ghost sm" onclick="archivar('${o.id}')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;stroke:var(--ink-soft)"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg>Archivar</button><button class="btn danger sm" onclick="delObjetivo('${o.id}')">Eliminar</button></div>`;
+  return `<div class="item"${arch?' style="opacity:.78"':''}><div class="it-top"><div><div class="it-title">${o.nombre}</div>${o.desc?`<div class="it-desc">${o.desc}</div>`:''}</div><span class="chip ${chip}">${est}</span></div>
+    <div class="it-meta"><span>${p.info}</span><span>${fecha(o.inicio)} → ${fecha(o.limite)}</span><span><strong style="color:var(--ink)">${p.pct}%</strong></span></div>
+    <div class="progress ${p.pct>=100?'full':''}"><span style="width:${p.pct}%"></span></div>${extra}${acciones}</div>`;
+}
+function renderObjetivos(){
+  const cont=$('#objetivosList');
+  const activos=DB.objetivos.filter(o=>!o.archivado);
+  const archivados=DB.objetivos.filter(o=>o.archivado);
+  let html='';
+  if(!verArchivados){
+    html += activos.length ? activos.map(o=>objetivoCard(o,false)).join('') : empty('No tenés objetivos activos.');
+  }else{
+    html += archivados.length ? archivados.map(o=>objetivoCard(o,true)).join('') : empty('No hay objetivos archivados.');
+  }
+  cont.innerHTML=html;
+  // Encabezado dinámico: botón nuevo + toggle archivados
+  $('#objHead').innerHTML = `<h2>${verArchivados?'Objetivos archivados':'Tus objetivos'}</h2>
+    <div style="display:flex;gap:10px;align-items:center">
+      <button class="archived-link" onclick="toggleArchivados()">${verArchivados?'← Volver a activos':`Ver archivados (${archivados.length})`}</button>
+      ${!verArchivados?`<button class="btn sm" onclick="openObjetivo()"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14"/></svg>Nuevo</button>`:''}
+    </div>`;
+}
+function toggleArchivados(){verArchivados=!verArchivados;renderObjetivos()}
+async function archivar(id){const o=DB.objetivos.find(x=>x.id===id);await dbUpdate('objetivos',id,{archivado:true});o.archivado=true;renderObjetivos();renderDashboard()}
+async function desarchivar(id){const o=DB.objetivos.find(x=>x.id===id);await dbUpdate('objetivos',id,{archivado:false});o.archivado=false;renderObjetivos();renderDashboard()}
+async function toggleCheck(id,i){const o=DB.objetivos.find(x=>x.id===id);o.checks[i]=o.checks[i]?0:1;renderObjetivos();await dbUpdate('objetivos',id,{checks:o.checks})}
+function openObjetivo(){
+  openModal(`<h2>Nuevo objetivo</h2><div class="modal-sub">Definí qué querés lograr y cómo medirlo.</div>
+    <div class="field"><label>Nombre</label><input id="f-nombre" placeholder="Ej: Correr 10 km"></div>
+    <div class="field"><label>Descripción breve</label><input id="f-desc" placeholder="Opcional"></div>
+    <div class="field"><label>Tipo de objetivo</label><select id="f-tipo" onchange="onTipoObj(this.value)"><option value="conteo">Conteo de hábitos</option><option value="monto">Monto de dinero</option><option value="otro">Otro</option></select></div>
+    <div class="field" id="f-meta-wrap"><label id="f-meta-lbl">Cantidad a cumplir (casilleros)</label><input id="f-meta" type="number" min="1" value="9"></div>
+    <div class="field-row"><div class="field"><label>Fecha de inicio</label><input id="f-inicio" type="date" value="${hoy()}"></div><div class="field"><label>Fecha límite</label><input id="f-limite" type="date"></div></div>
+    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveObjetivo()">Crear objetivo</button></div>`);
+}
+function onTipoObj(v){const w=$('#f-meta-wrap'),l=$('#f-meta-lbl'),i=$('#f-meta');if(v==='otro'){w.style.display='none'}else{w.style.display='block';l.textContent=v==='monto'?'Monto objetivo ($)':'Cantidad a cumplir (casilleros)';i.value=v==='monto'?500000:9}}
+async function saveObjetivo(){
+  const nombre=$('#f-nombre').value.trim();if(!nombre)return alert('Poné un nombre.');
+  const tipo=$('#f-tipo').value,meta=Number($('#f-meta').value)||0;
+  const checks = tipo==='conteo' ? Array(Math.max(1,meta)).fill(0) : [];
+  const row=await dbInsert('objetivos',{nombre,descripcion:$('#f-desc').value.trim(),tipo,
+    inicio:$('#f-inicio').value||null,limite:$('#f-limite').value||null,meta,checks,pct_manual:0,archivado:false});
+  DB.objetivos.unshift({id:row.id,nombre:row.nombre,desc:row.descripcion,tipo:row.tipo,inicio:row.inicio,limite:row.limite,meta:Number(row.meta),checks:row.checks||[],pct:0,archivado:false,cargas:[]});
+  closeModal();renderObjetivos();renderDashboard()
+}
+async function delObjetivo(id){if(confirm('¿Eliminar este objetivo?')){await dbDelete('objetivos',id);DB.objetivos=DB.objetivos.filter(o=>o.id!==id);renderObjetivos();renderDashboard()}}
+function openCarga(id){openModal(`<h2>Cargar importe</h2><div class="modal-sub">Sumá lo que ahorraste.</div><div class="field-row"><div class="field"><label>Fecha</label><input id="c-fecha" type="date" value="${hoy()}"></div><div class="field"><label>Importe ($)</label><input id="c-monto" type="number" min="0" placeholder="0"></div></div><div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveCarga('${id}')">Guardar</button></div>`)}
+async function saveCarga(id){const o=DB.objetivos.find(x=>x.id===id);const monto=Number($('#c-monto').value);if(!monto)return alert('Ingresá un importe.');const row=await dbInsert('objetivo_cargas',{objetivo_id:id,fecha:$('#c-fecha').value||null,monto});o.cargas=o.cargas||[];o.cargas.push({id:row.id,fecha:row.fecha,monto:Number(row.monto)});closeModal();renderObjetivos()}
+async function delCarga(oid,cid){await dbDelete('objetivo_cargas',cid);const o=DB.objetivos.find(x=>x.id===oid);o.cargas=o.cargas.filter(c=>c.id!==cid);renderObjetivos()}
+
+/* =========================================================================
+   2) HÁBITOS
+   ========================================================================= */
+function switchHabito(tab,btn){document.querySelectorAll('#habitosTabs .tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');['actividad','peso','lectura'].forEach(s=>$('#hab-'+s).style.display=s===tab?'block':'none');if(tab==='peso')drawPesoChart()}
+function renderActividad(){
+  const a=DB.actividad;const gym=a.filter(x=>x.gym).length;const prom=a.length?Math.round(a.reduce((s,x)=>s+Number(x.pasos||0),0)/a.length):0;const tn=a.filter(x=>x.tenis).length;
+  $('#hab-actividad').innerHTML=`<div class="stat-grid">${stat('Días con gimnasio',gym)}${stat('Promedio de pasos',nNum(prom))}${stat('Tenis registrado',tn)}${stat('Registros',a.length)}</div>
+    <div class="panel"><div class="panel-head"><h2>Registros</h2><button class="btn sm" onclick="openActividad()"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14"/></svg>Nuevo</button></div>
+    <div class="tbl-wrap"><table><tr><th>Fecha</th><th>Gym</th><th>Pasos</th><th>Tenis</th><th>Obs.</th><th></th></tr>
+    ${a.length?a.map(x=>`<tr><td class="strong">${fecha(x.fecha)}</td><td>${x.gym?'<span class="chip ok">Sí</span>':'<span class="chip muted">No</span>'}</td><td>${nNum(x.pasos)}</td><td>${x.tenis?'<span class="chip ok">Sí</span>':'<span class="chip muted">No</span>'}</td><td>${x.obs||'—'}</td><td style="text-align:right"><button class="btn danger sm" onclick="delRow('actividad','${x.id}',renderActividad)">✕</button></td></tr>`).join(''):`<tr><td colspan="6"><div class="empty">Sin registros.</div></td></tr>`}</table></div></div>`;
+}
+function openActividad(){openModal(`<h2>Registro de actividad</h2><div class="modal-sub">¿Cómo te moviste hoy?</div><div class="field"><label>Fecha</label><input id="a-fecha" type="date" value="${hoy()}"></div><div class="field-row"><div class="field"><label>Gimnasio</label><select id="a-gym"><option value="no">No</option><option value="si">Sí</option></select></div><div class="field"><label>Tenis</label><select id="a-tenis"><option value="no">No</option><option value="si">Sí</option></select></div></div><div class="field"><label>Pasos del día</label><input id="a-pasos" type="number" min="0" placeholder="0"></div><div class="field"><label>Observaciones</label><textarea id="a-obs" placeholder="Opcional"></textarea></div><div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveActividad()">Guardar</button></div>`)}
+async function saveActividad(){const row=await dbInsert('actividad',{fecha:$('#a-fecha').value||null,gym:$('#a-gym').value==='si',pasos:Number($('#a-pasos').value)||0,tenis:$('#a-tenis').value==='si',obs:$('#a-obs').value.trim()});DB.actividad.unshift({id:row.id,fecha:row.fecha,gym:row.gym,pasos:row.pasos,tenis:row.tenis,obs:row.obs||''});closeModal();renderActividad()}
+
+function imc(p){return p/(ESTATURA*ESTATURA)}
+function imcCat(v){return v<18.5?'Bajo':v<25?'Normal':v<30?'Sobrepeso':'Obesidad'}
+function renderPeso(){
+  const p=DB.peso.slice().sort((a,b)=>a.fecha<b.fecha?-1:1);const ult=p[p.length-1];
+  $('#hab-peso').innerHTML=`<div class="stat-grid">${stat('Último peso',ult?nNum(ult.peso,3):'—','kg')}${stat('Último IMC',ult?nNum(imc(ult.peso),1):'—',ult?imcCat(imc(ult.peso)):'')}${stat('Última cintura',ult?nNum(ult.cintura):'—','cm')}${stat('Registros',p.length)}</div>
+    <div class="panel"><div class="panel-head"><h2>Evolución del peso<span class="sub">Estatura: 1,78 m</span></h2><button class="btn sm" onclick="openPeso()"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14"/></svg>Nuevo</button></div><div style="height:200px"><canvas id="pesoChart"></canvas></div></div>
+    <div class="panel"><div class="panel-head"><h2>Histórico</h2></div><div class="tbl-wrap"><table><tr><th>Fecha</th><th>Peso (kg)</th><th>Cintura (cm)</th><th>IMC</th><th></th></tr>
+    ${p.length?p.slice().reverse().map(x=>`<tr><td class="strong">${fecha(x.fecha)}</td><td>${nNum(x.peso,3)}</td><td>${nNum(x.cintura)}</td><td>${nNum(imc(x.peso),1)} <span class="chip ${imc(x.peso)<25?'ok':'warn'}">${imcCat(imc(x.peso))}</span></td><td style="text-align:right"><button class="btn danger sm" onclick="delRow('peso','${x.id}',renderPeso)">✕</button></td></tr>`).join(''):`<tr><td colspan="5"><div class="empty">Sin registros.</div></td></tr>`}</table></div></div>`;
+  drawPesoChart()
+}
+let pesoChartRef=null;
+function drawPesoChart(){const cv=$('#pesoChart');if(!cv)return;const p=DB.peso.slice().sort((a,b)=>a.fecha<b.fecha?-1:1);if(pesoChartRef)pesoChartRef.destroy();pesoChartRef=new Chart(cv,{type:'line',data:{labels:p.map(x=>fecha(x.fecha).slice(0,5)),datasets:[{data:p.map(x=>x.peso),borderColor:'#b4653e',backgroundColor:'rgba(180,101,62,.08)',fill:true,tension:.35,borderWidth:2,pointRadius:3,pointBackgroundColor:'#b4653e'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'#ece7dc'},ticks:{color:'#a39c8f'}},x:{grid:{display:false},ticks:{color:'#a39c8f'}}}}})}
+function openPeso(){openModal(`<h2>Registro de peso</h2><div class="modal-sub">El IMC se calcula solo (estatura 1,78 m).</div><div class="field"><label>Fecha</label><input id="w-fecha" type="date" value="${hoy()}"></div><div class="field-row"><div class="field"><label>Peso (kg, 3 decimales)</label><input id="w-peso" type="number" step="0.001" placeholder="81,200"></div><div class="field"><label>Cintura (cm)</label><input id="w-cint" type="number" placeholder="90"></div></div><div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="savePeso()">Guardar</button></div>`)}
+async function savePeso(){const peso=Number($('#w-peso').value);if(!peso)return alert('Ingresá el peso.');const row=await dbInsert('peso',{fecha:$('#w-fecha').value||null,peso,cintura:Number($('#w-cint').value)||0});DB.peso.push({id:row.id,fecha:row.fecha,peso:Number(row.peso),cintura:Number(row.cintura)});closeModal();renderPeso()}
+
+function renderLectura(){
+  const l=DB.lectura;const term=l.filter(x=>x.estado==='terminado');const ley=l.filter(x=>x.estado==='leyendo').length;const punt=term.filter(x=>x.puntaje).length;const prom=punt?(term.reduce((s,x)=>s+(x.puntaje||0),0)/punt):0;
+  $('#hab-lectura').innerHTML=`<div class="stat-grid">${stat('Libros leídos',term.length)}${stat('En curso',ley)}${stat('Promedio puntaje',prom?nNum(prom,1):'—',prom?'/ 5':'')}${stat('Total cargados',l.length)}</div>
+    <div class="panel"><div class="panel-head"><h2>Mis libros</h2><button class="btn sm" onclick="openLibro()"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14"/></svg>Nuevo</button></div>
+    <div class="list">${l.length?l.map(x=>{const chip=x.estado==='terminado'?'ok':x.estado==='leyendo'?'info':'muted';const e=x.estado==='terminado'?'Terminado':x.estado==='leyendo'?'Leyendo':'Pendiente';return `<div class="item"><div class="it-top"><div><div class="it-title">${x.titulo}</div><div class="it-desc">${x.autor||'—'}</div></div><span class="chip ${chip}">${e}</span></div><div class="it-meta"><span>${fecha(x.inicio)} → ${x.fin?fecha(x.fin):'…'}</span>${x.puntaje?`<span>${'★'.repeat(x.puntaje)}${'☆'.repeat(5-x.puntaje)}</span>`:''}</div>${x.detalle?`<div class="it-desc" style="margin-top:6px">"${x.detalle}"</div>`:''}<div style="margin-top:10px"><button class="btn danger sm" onclick="delRow('lectura','${x.id}',renderLectura)">Eliminar</button></div></div>`}).join(''):empty('Todavía no cargaste libros.')}</div></div>`;
+}
+function openLibro(){openModal(`<h2>Nuevo libro</h2><div class="modal-sub">Registrá tu lectura.</div><div class="field"><label>Título</label><input id="b-tit" placeholder="Título del libro"></div><div class="field"><label>Autor</label><input id="b-aut" placeholder="Autor"></div><div class="field-row"><div class="field"><label>Inicio</label><input id="b-ini" type="date" value="${hoy()}"></div><div class="field"><label>Finalización</label><input id="b-fin" type="date"></div></div><div class="field-row"><div class="field"><label>Estado</label><select id="b-est"><option value="pendiente">Pendiente</option><option value="leyendo">Leyendo</option><option value="terminado">Terminado</option></select></div><div class="field"><label>Puntaje (1-5)</label><select id="b-pun"><option value="0">—</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div></div><div class="field"><label>Detalle / comentario</label><textarea id="b-det" placeholder="Opcional"></textarea></div><div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveLibro()">Guardar</button></div>`)}
+async function saveLibro(){const t=$('#b-tit').value.trim();if(!t)return alert('Poné un título.');const row=await dbInsert('lectura',{titulo:t,autor:$('#b-aut').value.trim(),inicio:$('#b-ini').value||null,fin:$('#b-fin').value||null,estado:$('#b-est').value,puntaje:Number($('#b-pun').value),detalle:$('#b-det').value.trim()});DB.lectura.unshift({id:row.id,titulo:row.titulo,autor:row.autor||'',inicio:row.inicio,fin:row.fin||'',estado:row.estado,puntaje:row.puntaje,detalle:row.detalle||''});closeModal();renderLectura()}
+
+/* =========================================================================
+   3) TRABAJO
+   ========================================================================= */
+function renderTrabajo(){
+  const t=DB.trabajo;
+  $('#trabajoStats').innerHTML=[stat('Tareas',t.tareas.length),stat('Proyectos',t.proyectos.length),stat('Ideas',t.ideas.length),stat('Pendientes',t.pendientes.length)].join('');
+  const blocks=[['tareas','Tareas laborales'],['proyectos','Proyectos'],['ideas','Ideas'],['pendientes','Pendientes importantes']];
+  $('#trabajoPanels').innerHTML=blocks.map(([k,lbl])=>`<div class="panel"><div class="panel-head"><h2>${lbl}</h2><button class="btn ghost sm" onclick="addTrabajo('${k}')"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14"/></svg>Agregar</button></div><div class="list">${t[k].length?t[k].map(x=>`<div class="item"><div class="it-top"><div class="it-title" style="font-weight:500;font-size:14px">${x.txt}</div><button class="btn danger sm" onclick="delTrabajo('${k}','${x.id}')">✕</button></div></div>`).join(''):empty('Vacío por ahora.')}</div></div>`).join('');
+}
+async function addTrabajo(k){const txt=prompt('Agregar a '+k+':');if(txt&&txt.trim()){const row=await dbInsert('trabajo_items',{categoria:k,texto:txt.trim()});DB.trabajo[k].unshift({id:row.id,txt:row.texto});renderTrabajo()}}
+async function delTrabajo(k,id){await dbDelete('trabajo_items',id);DB.trabajo[k]=DB.trabajo[k].filter(x=>x.id!==id);renderTrabajo()}
+
+/* =========================================================================
+   4) TENIS
+   ========================================================================= */
+function renderTenis(){
+  const t=DB.tenis;const jug=t.length;const gan=t.filter(x=>x.estado==='gane').length;const per=t.filter(x=>x.estado==='perdi').length;const pen=t.filter(x=>x.estado==='pendiente').length;const fin=gan+per;const efec=fin?Math.round(gan/fin*100):0;
+  $('#tenisStats').innerHTML=[stat('Jugados',jug),stat('Ganados',gan),stat('Perdidos',per),stat('Pendientes',pen),stat('Efectividad',efec,'%')].join('');
+  $('#tenisTable').innerHTML=`<tr><th>Fecha</th><th>Torneo</th><th>Cat.</th><th>Rival</th><th>Estado</th><th>Resultado</th><th></th></tr>${t.length?t.map(x=>{const chip=x.estado==='gane'?'ok':x.estado==='perdi'?'danger':'muted';const txt=x.estado==='gane'?'Ganó':x.estado==='perdi'?'Perdió':'Pendiente';return `<tr><td class="strong">${fecha(x.fecha)}</td><td>${x.torneo||'—'}</td><td>${x.categoria||'—'}</td><td>${x.contrincante||'—'}</td><td><span class="chip ${chip}">${txt}</span></td><td>${x.resultado||'—'}</td><td style="text-align:right"><button class="btn danger sm" onclick="delRow('tenis','${x.id}',renderTenis)">✕</button></td></tr>`}).join(''):`<tr><td colspan="7"><div class="empty">Sin partidos cargados.</div></td></tr>`}`;
+}
+function opcOptions(arr){return arr.map(v=>`<option value="${v}">`).join('')}
+function openPartido(){const o=DB.tenisOpc;openModal(`<h2>Nuevo partido</h2><div class="modal-sub">Torneo, categoría y rival se guardan para reusarlos.</div><div class="field"><label>Fecha</label><input id="t-fecha" type="date" value="${hoy()}"></div><div class="field"><label>Torneo</label><input id="t-torneo" list="dl-torneos" placeholder="Escribí o elegí"><datalist id="dl-torneos">${opcOptions(o.torneos)}</datalist></div><div class="field-row"><div class="field"><label>Categoría</label><input id="t-cat" list="dl-cat" placeholder="Ej: 4ta"><datalist id="dl-cat">${opcOptions(o.categorias)}</datalist></div><div class="field"><label>Estado</label><select id="t-est"><option value="pendiente">Pendiente</option><option value="gane">Gané</option><option value="perdi">Perdí</option></select></div></div><div class="field"><label>Contrincante</label><input id="t-rival" list="dl-rivales" placeholder="Nombre del rival"><datalist id="dl-rivales">${opcOptions(o.contrincantes)}</datalist></div><div class="field"><label>Resultado</label><input id="t-res" placeholder="Ej: 6-3 6-4"></div><div class="field"><label>Observaciones</label><textarea id="t-obs" placeholder="Opcional"></textarea></div><div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="savePartido()">Guardar</button></div>`)}
+async function savePartido(){
+  const torneo=$('#t-torneo').value.trim(),categoria=$('#t-cat').value.trim(),contrincante=$('#t-rival').value.trim();
+  const row=await dbInsert('tenis',{fecha:$('#t-fecha').value||null,torneo,categoria,estado:$('#t-est').value,resultado:$('#t-res').value.trim(),contrincante,obs:$('#t-obs').value.trim()});
+  DB.tenis.unshift({id:row.id,fecha:row.fecha,torneo:row.torneo||'',categoria:row.categoria||'',estado:row.estado,resultado:row.resultado||'',contrincante:row.contrincante||'',obs:row.obs||''});
+  const op=DB.tenisOpc;const nuevas=[];
+  if(torneo&&!op.torneos.includes(torneo)){op.torneos.push(torneo);nuevas.push({tipo:'torneo',valor:torneo})}
+  if(categoria&&!op.categorias.includes(categoria)){op.categorias.push(categoria);nuevas.push({tipo:'categoria',valor:categoria})}
+  if(contrincante&&!op.contrincantes.includes(contrincante)){op.contrincantes.push(contrincante);nuevas.push({tipo:'contrincante',valor:contrincante})}
+  if(nuevas.length){const {error}=await sb.from('tenis_opciones').upsert(nuevas,{onConflict:'user_id,tipo,valor',ignoreDuplicates:true});if(error)console.error(error)}
+  closeModal();renderTenis()
+}
+
+/* =========================================================================
+   5) RECORDATORIOS
+   ========================================================================= */
+function renderRecordatorios(){
+  const r=DB.recordatorios,h=hoy();
+  const venc=r.filter(x=>x.estado!=='completado'&&x.venc&&x.venc<h).length;
+  const prox=r.filter(x=>x.estado!=='completado'&&(!x.venc||x.venc>=h)).length;
+  const comp=r.filter(x=>x.estado==='completado').length;
+  $('#recStats').innerHTML=[stat('Vencidos',venc),stat('Próximos',prox),stat('Completados',comp)].join('');
+  // Ordenar: no completados por vencimiento, completados al final
+  const ord=r.slice().sort((a,b)=>{
+    if((a.estado==='completado')!==(b.estado==='completado')) return a.estado==='completado'?1:-1;
+    return (a.venc||'')<(b.venc||'')?-1:1;
+  });
+  $('#recTable').innerHTML=`<tr><th>Tarea</th><th>Vence</th><th>Estado</th><th style="text-align:right">Acciones</th></tr>${
+    ord.length?ord.map(x=>{
+      const vencido=x.estado!=='completado'&&x.venc&&x.venc<h;
+      const chip=x.estado==='completado'?'ok':x.estado==='enproceso'?'info':vencido?'danger':'warn';
+      const txt=x.estado==='completado'?'Completado':x.estado==='enproceso'?'En proceso':vencido?'Vencido':'Pendiente';
+      return `<tr class="rec-row">
+        <td><div class="rec-task">${x.tarea}</div>${x.obs?`<div class="rec-obs">${x.obs}</div>`:''}</td>
+        <td>${fecha(x.venc)}</td>
+        <td><span class="chip ${chip}">${txt}</span></td>
+        <td><div class="rec-actions">${x.estado!=='completado'?`<button class="btn ghost sm" onclick="completarRec('${x.id}')">Completar</button>`:''}<button class="btn danger sm" onclick="delRow('recordatorios','${x.id}',renderRecordatorios)">✕</button></div></td>
+      </tr>`;
+    }).join(''):`<tr><td colspan="4"><div class="empty">No tenés recordatorios cargados.</div></td></tr>`
+  }`;
+}
+async function completarRec(id){const x=DB.recordatorios.find(r=>r.id===id);x.estado='completado';renderRecordatorios();await dbUpdate('recordatorios',id,{estado:'completado'})}
+function openRecordatorio(){openModal(`<h2>Nuevo recordatorio</h2><div class="modal-sub">Algo que no se te puede pasar.</div><div class="field"><label>Tarea</label><input id="r-tarea" placeholder="¿Qué tenés que hacer?"></div><div class="field-row"><div class="field"><label>Vencimiento</label><input id="r-venc" type="date" value="${hoy()}"></div><div class="field"><label>Estado</label><select id="r-est"><option value="pendiente">Pendiente</option><option value="enproceso">En proceso</option><option value="completado">Completado</option></select></div></div><div class="field"><label>Observaciones</label><textarea id="r-obs" placeholder="Opcional"></textarea></div><div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveRecordatorio()">Guardar</button></div>`)}
+async function saveRecordatorio(){const t=$('#r-tarea').value.trim();if(!t)return alert('Escribí la tarea.');const row=await dbInsert('recordatorios',{tarea:t,venc:$('#r-venc').value||null,estado:$('#r-est').value,obs:$('#r-obs').value.trim()});DB.recordatorios.unshift({id:row.id,tarea:row.tarea,venc:row.venc,estado:row.estado,obs:row.obs||''});closeModal();renderRecordatorios();renderDashboard()}
+
+/* =========================================================================
+   HELPERS
+   ========================================================================= */
+function stat(label,value,small=''){return `<div class="stat"><div class="label">${label}</div><div class="value">${value}${small?` <small>${small}</small>`:''}</div></div>`}
+function empty(t){return `<div class="empty">${t}</div>`}
+async function delRow(tabla,id,cb){if(confirm('¿Eliminar este registro?')){await dbDelete(tabla,id);DB[tabla]=DB[tabla].filter(x=>x.id!==id);cb&&cb();if(tabla==='recordatorios')renderDashboard()}}
+
+const RENDER={objetivos:renderObjetivos,habitos:()=>{renderActividad();renderPeso();renderLectura()},trabajo:renderTrabajo,tenis:renderTenis,recordatorios:renderRecordatorios};
+
+/* =========================================================================
+   AUTENTICACIÓN
+   ========================================================================= */
+let authMode='login';
+function setAuthMode(m){
+  authMode=m;
+  $('#tabLogin').classList.toggle('active',m==='login');
+  $('#tabSignup').classList.toggle('active',m==='signup');
+  $('#authSubmit').textContent = m==='login'?'Ingresar':'Crear cuenta';
+  $('#authPass').setAttribute('autocomplete', m==='login'?'current-password':'new-password');
+  hideAuthMsg();
+}
+function authMsg(text,type){const el=$('#authMsg');el.textContent=text;el.className='auth-msg '+type}
+function hideAuthMsg(){$('#authMsg').className='auth-msg'}
+
+async function doAuth(){
+  const email=$('#authEmail').value.trim(), pass=$('#authPass').value;
+  if(!email||!pass) return authMsg('Completá email y contraseña.','err');
+  $('#authSubmit').disabled=true;
+  try{
+    if(authMode==='login'){
+      const {error}=await sb.auth.signInWithPassword({email,password:pass});
+      if(error) throw error;
+      // onAuthStateChange se encarga de iniciar la app
+    }else{
+      const {data,error}=await sb.auth.signUp({email,password:pass});
+      if(error) throw error;
+      if(data.session){ /* sesión inmediata: la maneja el listener */ }
+      else authMsg('Cuenta creada. Revisá tu email para confirmar y luego ingresá.','ok');
+    }
+  }catch(e){
+    authMsg(traducirError(e.message),'err');
+  }finally{ $('#authSubmit').disabled=false; }
+}
+function traducirError(m){
+  if(/Invalid login/i.test(m)) return 'Email o contraseña incorrectos.';
+  if(/already registered/i.test(m)) return 'Ese email ya tiene cuenta. Probá ingresar.';
+  if(/at least 6/i.test(m)) return 'La contraseña debe tener al menos 6 caracteres.';
+  return m;
+}
+async function doLogout(){ await sb.auth.signOut(); location.reload(); }
+
+/* ---------- Arranque de la app una vez logueado ---------- */
+let appStarted=false;
+async function startApp(user){
+  if(appStarted) return;
+  appStarted=true;
+  USER=user;
+  $('#sideEmail').textContent=user.email;
+  document.body.classList.add('authed');
+  $('#loader').style.display='none';
+  $('#authScreen').style.display='none';
+  await loadSettings();
+  await hydrate();
+  renderNav();
+  go('dashboard');
+}
+
+/* ---------- Mostrar login ---------- */
+function showLogin(){
+  $('#loader').style.display='none';
+  $('#authScreen').style.display='flex';
+}
+
+/* ---------- Detección de sesión ---------- */
+sb.auth.onAuthStateChange((event,session)=>{
+  if(session && session.user){ startApp(session.user); }
+  else if(event==='SIGNED_OUT'){ location.reload(); }
+});
+
+(async function init(){
+  // Aviso si faltan credenciales
+  if(SUPABASE_URL.includes('TU-PROYECTO')||SUPABASE_ANON.includes('TU-ANON')){
+    $('#loader').textContent='Falta configurar SUPABASE_URL y SUPABASE_ANON en el archivo.';
+    return;
+  }
+  const {data}=await sb.auth.getSession();
+  if(data.session && data.session.user){ startApp(data.session.user); }
+  else { showLogin(); }
+})();
+</script>
+</body>
+</html>
