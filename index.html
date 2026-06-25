@@ -272,6 +272,39 @@ tr:last-child td{border-bottom:none}
 
 .empty{text-align:center;padding:30px 14px;color:var(--ink-faint);font-size:14px}
 
+/* ---- Sub-tabs (segundo nivel, p.ej. dentro de Trabajo) ---- */
+.subtabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.subtab{border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);padding:7px 14px;border-radius:999px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:.14s}
+.subtab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* ---- Selector de año ---- */
+.year-ctl{display:inline-flex;align-items:center;gap:8px}
+.year-ctl button{width:30px;height:30px;border:1px solid var(--line);background:var(--surface);border-radius:8px;cursor:pointer;font-size:16px;color:var(--ink-soft);display:flex;align-items:center;justify-content:center}
+.year-ctl button:hover{background:var(--surface-2)}
+.year-ctl .y{font-family:'Fraunces',serif;font-weight:600;font-size:18px;min-width:62px;text-align:center}
+
+/* ---- Grilla matriz (meses × filas) ---- */
+.matrix{width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px}
+.matrix th,.matrix td{border:1px solid var(--line);padding:6px 7px;text-align:center}
+.matrix th{background:var(--surface-2);color:var(--ink-faint);font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;font-weight:600}
+.matrix td.rowhead,.matrix th.rowhead{position:sticky;left:0;z-index:2;background:var(--surface);text-align:left;font-weight:600;color:var(--ink);min-width:150px}
+.matrix th.rowhead{background:var(--surface-2)}
+.matrix .subhead{font-size:11px;color:var(--ink-faint);font-weight:500}
+.cell-liq{cursor:pointer;font-weight:700;user-select:none}
+.cell-liq.on{background:var(--ok-bg);color:var(--ok)}
+.cell-liq.off{color:var(--ink-faint)}
+.cell-liq:hover{outline:2px solid var(--accent);outline-offset:-2px}
+.cell-hon{cursor:pointer;line-height:1.25}
+.cell-hon:hover{outline:2px solid var(--accent);outline-offset:-2px}
+.cell-hon .m{font-weight:600;color:var(--ink)}
+.cell-hon.pago{background:var(--ok-bg)}
+.cell-hon .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-left:4px;vertical-align:middle}
+.cell-hon .dot.si{background:var(--ok)}
+.cell-hon .dot.no{background:var(--danger)}
+.proj-card{background:var(--surface);border:1px dashed var(--line);border-radius:var(--r-lg);padding:28px;text-align:center;color:var(--ink-soft)}
+.proj-card h3{font-family:'Fraunces',serif;font-size:20px;color:var(--ink);margin-bottom:6px}
+.proj-card .pill{display:inline-block;margin-top:12px;background:var(--surface-2);border:1px solid var(--line);color:var(--ink-faint);font-size:12px;font-weight:600;padding:5px 12px;border-radius:999px}
+
 .overlay{position:fixed;inset:0;z-index:100;background:rgba(43,39,34,.34);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:16px}
 .overlay.show{display:flex}
 .modal{background:var(--surface);width:100%;max-width:520px;border-radius:18px;padding:22px 20px 24px;max-height:90vh;overflow-y:auto;animation:pop .2s ease}
@@ -436,9 +469,13 @@ body.authed .app{display:flex}
 
       <!-- TRABAJO -->
       <section id="view-trabajo" class="view">
-        <div class="page-head"><h1>Trabajo</h1><p>Módulo base — lo desarrollamos más adelante.</p></div>
-        <div class="stat-grid" id="trabajoStats"></div>
-        <div id="trabajoPanels"></div>
+        <div class="page-head"><h1>Trabajo</h1><p>Áreas de trabajo y seguimiento profesional.</p></div>
+        <div class="tabs" id="trabajoTabs">
+          <button class="tab active" onclick="switchTrabajo('contador',this)">Contador Público</button>
+          <button class="tab" onclick="switchTrabajo('fondos',this)">Desarrollo de Fondos</button>
+        </div>
+        <div id="tb-contador" class="tb-sub"></div>
+        <div id="tb-fondos" class="tb-sub" style="display:none"></div>
       </section>
 
       <!-- TENIS -->
@@ -446,7 +483,10 @@ body.authed .app{display:flex}
         <div class="page-head"><h1>Tenis</h1><p>Registro de partidos y efectividad.</p></div>
         <div class="stat-grid" id="tenisStats"></div>
         <div class="panel"><div class="panel-head"><h2>Partidos</h2>
-          <button class="btn sm" onclick="openPartido()"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14"/></svg>Nuevo</button></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn ghost sm" onclick="openOpcionesTenis()"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Opciones</button>
+            <button class="btn sm" onclick="openPartido()"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14"/></svg>Nuevo</button>
+          </div></div>
           <div class="tbl-wrap"><table id="tenisTable"></table></div></div>
       </section>
 
@@ -507,7 +547,8 @@ let DB = emptyDB();   // caché en memoria; misma forma que usaba la maqueta
 function emptyDB(){
   return {objetivos:[],actividad:[],peso:[],lectura:[],tenis:[],
     tenisOpc:{torneos:[],categorias:[],contrincantes:[]},
-    recordatorios:[],trabajo:{tareas:[],proyectos:[],ideas:[],pendientes:[]}};
+    recordatorios:[],
+    cp:{clientes:[],personal:[],liquidaciones:[],honorarios:[]}};
 }
 
 /* ---------- save(): no-op de compatibilidad ----------
@@ -520,18 +561,21 @@ function save(){}
    HIDRATACIÓN — traer todo lo del usuario y armar el caché DB
    ========================================================================= */
 async function hydrate(){
-  const [obj,car,act,pes,lec,ten,opc,tra,rec] = await Promise.all([
+  const [obj,car,act,pes,lec,ten,opc,rec,cli,per,liq,hon] = await Promise.all([
     sb.from('objetivos').select('*').order('creado_en',{ascending:false}),
     sb.from('objetivo_cargas').select('*').order('fecha',{ascending:true}),
     sb.from('actividad').select('*').order('fecha',{ascending:false}),
     sb.from('peso').select('*').order('fecha',{ascending:true}),
     sb.from('lectura').select('*').order('creado_en',{ascending:false}),
     sb.from('tenis').select('*').order('fecha',{ascending:false}),
-    sb.from('tenis_opciones').select('*'),
-    sb.from('trabajo_items').select('*').order('creado_en',{ascending:false}),
+    sb.from('tenis_opciones').select('*').order('valor',{ascending:true}),
     sb.from('recordatorios').select('*').order('creado_en',{ascending:false}),
+    sb.from('cp_clientes').select('*').order('nombre',{ascending:true}),
+    sb.from('cp_personal').select('*').order('nombre',{ascending:true}),
+    sb.from('cp_liquidaciones').select('*'),
+    sb.from('cp_honorarios').select('*'),
   ]);
-  for(const r of [obj,car,act,pes,lec,ten,opc,tra,rec]){
+  for(const r of [obj,car,act,pes,lec,ten,opc,rec,cli,per,liq,hon]){
     if(r.error){ console.error(r.error); }
   }
   DB = emptyDB();
@@ -548,11 +592,15 @@ async function hydrate(){
   DB.lectura       = (lec.data||[]).map(l=>({id:l.id,titulo:l.titulo,autor:l.autor||'',inicio:l.inicio,fin:l.fin||'',estado:l.estado,puntaje:l.puntaje,detalle:l.detalle||''}));
   DB.tenis         = (ten.data||[]).map(t=>({id:t.id,fecha:t.fecha,torneo:t.torneo||'',categoria:t.categoria||'',estado:t.estado,resultado:t.resultado||'',contrincante:t.contrincante||'',obs:t.obs||''}));
   DB.recordatorios = (rec.data||[]).map(r=>({id:r.id,tarea:r.tarea,venc:r.venc,estado:r.estado,obs:r.obs||''}));
-  // Opciones de tenis
+  // Opciones de tenis (guardamos id + valor para poder eliminarlas)
   const op=DB.tenisOpc;
-  (opc.data||[]).forEach(o=>{ if(o.tipo==='torneo')op.torneos.push(o.valor); else if(o.tipo==='categoria')op.categorias.push(o.valor); else if(o.tipo==='contrincante')op.contrincantes.push(o.valor); });
-  // Trabajo
-  (tra.data||[]).forEach(i=>{ if(DB.trabajo[i.categoria]) DB.trabajo[i.categoria].push({id:i.id,txt:i.texto}); });
+  (opc.data||[]).forEach(o=>{ const it={id:o.id,valor:o.valor};
+    if(o.tipo==='torneo')op.torneos.push(it); else if(o.tipo==='categoria')op.categorias.push(it); else if(o.tipo==='contrincante')op.contrincantes.push(it); });
+  // Contador Público
+  DB.cp.clientes      = (cli.data||[]).map(c=>({id:c.id,nombre:c.nombre,cuit:c.cuit||'',clave:c.clave_fiscal||''}));
+  DB.cp.personal      = (per.data||[]).map(p=>({id:p.id,cliente_id:p.cliente_id,nombre:p.nombre}));
+  DB.cp.liquidaciones = (liq.data||[]).map(l=>({id:l.id,personal_id:l.personal_id,anio:l.anio,mes:l.mes,liquidado:l.liquidado}));
+  DB.cp.honorarios    = (hon.data||[]).map(h=>({id:h.id,cliente_id:h.cliente_id,anio:h.anio,mes:h.mes,monto:Number(h.monto),pagado:h.pagado}));
 }
 
 /* =========================================================================
@@ -636,8 +684,8 @@ const MODULES=[
     meta:()=>`<b>${DB.objetivos.filter(o=>!o.archivado).length}</b> en seguimiento`},
   {id:'habitos',     t:'Buenos hábitos',icon:iHeart,  mvar:'m2',
     meta:()=>`<b>${DB.actividad.length}</b> registros de actividad`},
-  {id:'trabajo',     t:'Trabajo',       icon:iBrief,  mvar:'m3', soon:true,
-    meta:()=>'Módulo base'},
+  {id:'trabajo',     t:'Trabajo',       icon:iBrief,  mvar:'m3',
+    meta:()=>`<b>${DB.cp.clientes.length}</b> clientes · Contador Público`},
   {id:'tenis',       t:'Tenis',         icon:iTennis, mvar:'m4',
     meta:()=>`<b>${DB.tenis.length}</b> partidos`},
   {id:'recordatorios',t:'Recordatorios',icon:iBell,   mvar:'m5',
@@ -820,16 +868,179 @@ function openLibro(){openModal(`<h2>Nuevo libro</h2><div class="modal-sub">Regis
 async function saveLibro(){const t=$('#b-tit').value.trim();if(!t)return alert('Poné un título.');const row=await dbInsert('lectura',{titulo:t,autor:$('#b-aut').value.trim(),inicio:$('#b-ini').value||null,fin:$('#b-fin').value||null,estado:$('#b-est').value,puntaje:Number($('#b-pun').value),detalle:$('#b-det').value.trim()});DB.lectura.unshift({id:row.id,titulo:row.titulo,autor:row.autor||'',inicio:row.inicio,fin:row.fin||'',estado:row.estado,puntaje:row.puntaje,detalle:row.detalle||''});closeModal();renderLectura()}
 
 /* =========================================================================
-   3) TRABAJO
+   3) TRABAJO — A) Contador Público   B) Desarrollo de Fondos
    ========================================================================= */
-function renderTrabajo(){
-  const t=DB.trabajo;
-  $('#trabajoStats').innerHTML=[stat('Tareas',t.tareas.length),stat('Proyectos',t.proyectos.length),stat('Ideas',t.ideas.length),stat('Pendientes',t.pendientes.length)].join('');
-  const blocks=[['tareas','Tareas laborales'],['proyectos','Proyectos'],['ideas','Ideas'],['pendientes','Pendientes importantes']];
-  $('#trabajoPanels').innerHTML=blocks.map(([k,lbl])=>`<div class="panel"><div class="panel-head"><h2>${lbl}</h2><button class="btn ghost sm" onclick="addTrabajo('${k}')"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14"/></svg>Agregar</button></div><div class="list">${t[k].length?t[k].map(x=>`<div class="item"><div class="it-top"><div class="it-title" style="font-weight:500;font-size:14px">${x.txt}</div><button class="btn danger sm" onclick="delTrabajo('${k}','${x.id}')">✕</button></div></div>`).join(''):empty('Vacío por ahora.')}</div></div>`).join('');
+const MESES_ABR=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+let trabajoTab='contador';   // contador | fondos
+let cpTab='liquidacion';     // liquidacion | expansion
+let cpAnio=new Date().getFullYear();
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+function renderTrabajo(){ switchTrabajo(trabajoTab); }
+function switchTrabajo(tab,btn){
+  trabajoTab=tab;
+  document.querySelectorAll('#trabajoTabs .tab').forEach(t=>t.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  else document.querySelectorAll('#trabajoTabs .tab')[tab==='contador'?0:1]?.classList.add('active');
+  $('#tb-contador').style.display = tab==='contador'?'block':'none';
+  $('#tb-fondos').style.display   = tab==='fondos'?'block':'none';
+  if(tab==='contador') renderContador(); else renderFondos();
 }
-async function addTrabajo(k){const txt=prompt('Agregar a '+k+':');if(txt&&txt.trim()){const row=await dbInsert('trabajo_items',{categoria:k,texto:txt.trim()});DB.trabajo[k].unshift({id:row.id,txt:row.texto});renderTrabajo()}}
-async function delTrabajo(k,id){await dbDelete('trabajo_items',id);DB.trabajo[k]=DB.trabajo[k].filter(x=>x.id!==id);renderTrabajo()}
+function projCard(titulo,desc,pill){return `<div class="proj-card"><h3>${titulo}</h3><p>${desc}</p><span class="pill">${pill}</span></div>`}
+function renderFondos(){ $('#tb-fondos').innerHTML = projCard('Proyecto: Obtención de clientes','Desarrollo de Fondos — estrategia y plan para captar clientes. Lo planificamos juntos y después lo codeamos.','En planificación'); }
+
+/* ---------- A) CONTADOR PÚBLICO ---------- */
+function setCpTab(t){cpTab=t;renderContador()}
+function cambiarAnio(d){cpAnio+=d;renderContador()}
+function cpAnioCtl(){return `<div class="year-ctl"><button onclick="cambiarAnio(-1)">‹</button><span class="y">${cpAnio}</span><button onclick="cambiarAnio(1)">›</button></div>`}
+function renderContador(){
+  const sub=`<div class="subtabs">
+    <button class="subtab ${cpTab==='liquidacion'?'active':''}" onclick="setCpTab('liquidacion')">Liquidación de Limpieza</button>
+    <button class="subtab ${cpTab==='expansion'?'active':''}" onclick="setCpTab('expansion')">Proyecto: Expansión de clientes</button></div>`;
+  let body = cpTab==='liquidacion'
+    ? renderLiquidacion()
+    : projCard('Proyecto: Expansión de clientes','Plan para sumar nuevos clientes al servicio de liquidación de limpieza doméstica. Lo planificamos juntos y después lo codeamos.','En planificación');
+  $('#tb-contador').innerHTML=sub+body;
+}
+function renderLiquidacion(){
+  return `${panelClientes()}
+  <div class="panel"><div class="panel-head"><h2>Liquidaciones de sueldo</h2>${cpAnioCtl()}</div>${gridLiquidaciones()}</div>
+  <div class="panel"><div class="panel-head"><h2>Honorarios</h2>${cpAnioCtl()}</div>${gridHonorarios()}</div>`;
+}
+
+/* --- Clientes (+ su personal) --- */
+function panelClientes(){
+  const cli=DB.cp.clientes;
+  const rows = cli.length ? cli.map(c=>{
+    const pers=DB.cp.personal.filter(p=>p.cliente_id===c.id);
+    const persTxt = pers.length ? pers.map(p=>`<span class="chip muted" style="margin:2px 3px;display:inline-block">${esc(p.nombre)} <a onclick="delPersonal('${p.id}')" style="cursor:pointer;color:var(--danger);font-weight:700">✕</a></span>`).join('') : '<span class="subhead">Sin personal</span>';
+    return `<tr><td class="strong">${esc(c.nombre)}</td><td>${esc(c.cuit)||'—'}</td><td>${esc(c.clave)||'—'}</td><td>${persTxt}</td>
+      <td style="text-align:right;white-space:nowrap"><button class="btn ghost sm" onclick="addPersonal('${c.id}')">+ Personal</button> <button class="btn ghost sm" onclick="openCliente('${c.id}')">Editar</button> <button class="btn danger sm" onclick="delCliente('${c.id}')">✕</button></td></tr>`;
+  }).join('') : `<tr><td colspan="5"><div class="empty">Todavía no cargaste clientes.</div></td></tr>`;
+  return `<div class="panel"><div class="panel-head"><h2>Clientes</h2><button class="btn sm" onclick="openCliente()"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14"/></svg>Nuevo cliente</button></div>
+    <div class="tbl-wrap"><table><tr><th>Cliente</th><th>CUIT</th><th>Clave fiscal</th><th>Personal</th><th></th></tr>${rows}</table></div></div>`;
+}
+function openCliente(id){
+  const c = id ? DB.cp.clientes.find(x=>x.id===id) : null;
+  openModal(`<h2>${c?'Editar cliente':'Nuevo cliente'}</h2><div class="modal-sub">Datos para la liquidación de limpieza doméstica.</div>
+    <div class="field"><label>Nombre del cliente</label><input id="cl-nom" value="${c?esc(c.nombre):''}" placeholder="Nombre y apellido"></div>
+    <div class="field-row"><div class="field"><label>CUIT</label><input id="cl-cuit" value="${c?esc(c.cuit):''}" placeholder="20-12345678-9"></div>
+    <div class="field"><label>Clave fiscal</label><input id="cl-clave" value="${c?esc(c.clave):''}" placeholder="Clave AFIP"></div></div>
+    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveCliente(${c?`'${c.id}'`:'null'})">Guardar</button></div>`);
+}
+async function saveCliente(id){
+  const nombre=$('#cl-nom').value.trim(); if(!nombre)return alert('Poné el nombre del cliente.');
+  const cuit=$('#cl-cuit').value.trim(), clave=$('#cl-clave').value.trim();
+  if(id){ await dbUpdate('cp_clientes',id,{nombre,cuit,clave_fiscal:clave}); Object.assign(DB.cp.clientes.find(x=>x.id===id),{nombre,cuit,clave}); }
+  else{ const row=await dbInsert('cp_clientes',{nombre,cuit,clave_fiscal:clave}); DB.cp.clientes.push({id:row.id,nombre:row.nombre,cuit:row.cuit||'',clave:row.clave_fiscal||''}); }
+  DB.cp.clientes.sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  closeModal();renderContador();
+}
+async function delCliente(id){
+  if(!confirm('¿Eliminar este cliente? También se borran su personal, liquidaciones y honorarios.'))return;
+  await dbDelete('cp_clientes',id);
+  const persIds=DB.cp.personal.filter(p=>p.cliente_id===id).map(p=>p.id);
+  DB.cp.clientes=DB.cp.clientes.filter(c=>c.id!==id);
+  DB.cp.personal=DB.cp.personal.filter(p=>p.cliente_id!==id);
+  DB.cp.liquidaciones=DB.cp.liquidaciones.filter(l=>!persIds.includes(l.personal_id));
+  DB.cp.honorarios=DB.cp.honorarios.filter(h=>h.cliente_id!==id);
+  renderContador();
+}
+async function addPersonal(clienteId){
+  const nombre=prompt('Nombre del personal:'); if(!nombre||!nombre.trim())return;
+  const row=await dbInsert('cp_personal',{cliente_id:clienteId,nombre:nombre.trim()});
+  DB.cp.personal.push({id:row.id,cliente_id:row.cliente_id,nombre:row.nombre});
+  DB.cp.personal.sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  renderContador();
+}
+async function delPersonal(id){
+  if(!confirm('¿Eliminar a esta persona? Se borran sus liquidaciones.'))return;
+  await dbDelete('cp_personal',id);
+  DB.cp.personal=DB.cp.personal.filter(p=>p.id!==id);
+  DB.cp.liquidaciones=DB.cp.liquidaciones.filter(l=>l.personal_id!==id);
+  renderContador();
+}
+
+/* --- Grilla de liquidaciones de sueldo (personal × meses) --- */
+function gridLiquidaciones(){
+  const cli=DB.cp.clientes, pers=DB.cp.personal;
+  if(!pers.length) return '<div class="empty">Cargá clientes y su personal para liquidar sueldos.</div>';
+  let html='<div class="tbl-wrap"><table class="matrix"><tr><th class="rowhead">Personal / Cliente</th>'+MESES_ABR.map(m=>`<th>${m}</th>`).join('')+'</tr>';
+  cli.forEach(c=>{
+    pers.filter(p=>p.cliente_id===c.id).forEach(p=>{
+      html+=`<tr><td class="rowhead">${esc(p.nombre)}<div class="subhead">${esc(c.nombre)}</div></td>`;
+      for(let m=1;m<=12;m++){
+        const rec=DB.cp.liquidaciones.find(l=>l.personal_id===p.id&&l.anio===cpAnio&&l.mes===m);
+        const on=rec&&rec.liquidado;
+        html+=`<td class="cell-liq ${on?'on':'off'}" onclick="toggleLiq('${p.id}',${m})">${on?'✓':'—'}</td>`;
+      }
+      html+='</tr>';
+    });
+  });
+  return html+'</table></div><div class="subhead" style="margin-top:8px">Tocá una celda para marcar/desmarcar si se liquidó el recibo de ese mes.</div>';
+}
+async function toggleLiq(personalId,mes){
+  let rec=DB.cp.liquidaciones.find(l=>l.personal_id===personalId&&l.anio===cpAnio&&l.mes===mes);
+  if(rec){
+    const nuevo=!rec.liquidado;
+    const {error}=await sb.from('cp_liquidaciones').update({liquidado:nuevo}).eq('id',rec.id);
+    if(error){alert('Error: '+error.message);return}
+    rec.liquidado=nuevo;
+  }else{
+    const {data,error}=await sb.from('cp_liquidaciones').insert({personal_id:personalId,anio:cpAnio,mes,liquidado:true}).select().single();
+    if(error){alert('Error: '+error.message);return}
+    DB.cp.liquidaciones.push({id:data.id,personal_id:personalId,anio:cpAnio,mes,liquidado:true});
+  }
+  renderContador();
+}
+
+/* --- Grilla de honorarios (clientes × meses, monto + pagado) --- */
+function gridHonorarios(){
+  const cli=DB.cp.clientes;
+  if(!cli.length) return '<div class="empty">Cargá clientes para registrar honorarios.</div>';
+  let html='<div class="tbl-wrap"><table class="matrix"><tr><th class="rowhead">Cliente</th>'+MESES_ABR.map(m=>`<th>${m}</th>`).join('')+'<th>Total año</th></tr>';
+  cli.forEach(c=>{
+    html+=`<tr><td class="rowhead">${esc(c.nombre)}</td>`; let total=0;
+    for(let m=1;m<=12;m++){
+      const rec=DB.cp.honorarios.find(h=>h.cliente_id===c.id&&h.anio===cpAnio&&h.mes===m);
+      const monto=rec?rec.monto:0; total+=monto; const pagado=rec&&rec.pagado;
+      const inner = monto ? `<span class="m">${nMoney(monto)}</span><span class="dot ${pagado?'si':'no'}"></span>` : '<span class="subhead">+</span>';
+      html+=`<td class="cell-hon ${monto&&pagado?'pago':''}" onclick="openHonorario('${c.id}',${m})">${inner}</td>`;
+    }
+    html+=`<td class="strong">${nMoney(total)}</td></tr>`;
+  });
+  return html+'</table></div><div class="subhead" style="margin-top:8px">● verde = cobrado · ● rojo = pendiente de pago. Tocá una celda para cargar o editar el honorario.</div>';
+}
+function openHonorario(clienteId,mes){
+  const rec=DB.cp.honorarios.find(h=>h.cliente_id===clienteId&&h.anio===cpAnio&&h.mes===mes);
+  const cli=DB.cp.clientes.find(c=>c.id===clienteId);
+  openModal(`<h2>Honorario</h2><div class="modal-sub">${esc(cli.nombre)} — ${MESES_ABR[mes-1]} ${cpAnio}</div>
+    <div class="field"><label>Importe cobrado ($)</label><input id="h-monto" type="number" min="0" value="${rec?rec.monto:''}" placeholder="0"></div>
+    <div class="field"><label>¿Pagado?</label><select id="h-pago"><option value="no" ${rec&&!rec.pagado?'selected':''}>No</option><option value="si" ${rec&&rec.pagado?'selected':''}>Sí</option></select></div>
+    <div class="modal-actions">${rec?`<button class="btn danger ghost" onclick="delHonorario('${clienteId}',${mes})">Borrar</button>`:''}<button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveHonorario('${clienteId}',${mes})">Guardar</button></div>`);
+}
+async function saveHonorario(clienteId,mes){
+  const monto=Number($('#h-monto').value)||0, pagado=$('#h-pago').value==='si';
+  let rec=DB.cp.honorarios.find(h=>h.cliente_id===clienteId&&h.anio===cpAnio&&h.mes===mes);
+  if(rec){
+    const {error}=await sb.from('cp_honorarios').update({monto,pagado}).eq('id',rec.id);
+    if(error){alert('Error: '+error.message);return}
+    rec.monto=monto;rec.pagado=pagado;
+  }else{
+    const {data,error}=await sb.from('cp_honorarios').insert({cliente_id:clienteId,anio:cpAnio,mes,monto,pagado}).select().single();
+    if(error){alert('Error: '+error.message);return}
+    DB.cp.honorarios.push({id:data.id,cliente_id:clienteId,anio:cpAnio,mes,monto,pagado});
+  }
+  closeModal();renderContador();
+}
+async function delHonorario(clienteId,mes){
+  const rec=DB.cp.honorarios.find(h=>h.cliente_id===clienteId&&h.anio===cpAnio&&h.mes===mes);
+  if(!rec)return;
+  const {error}=await sb.from('cp_honorarios').delete().eq('id',rec.id);
+  if(error){alert('Error: '+error.message);return}
+  DB.cp.honorarios=DB.cp.honorarios.filter(h=>h.id!==rec.id);
+  closeModal();renderContador();
+}
 
 /* =========================================================================
    4) TENIS
@@ -839,18 +1050,64 @@ function renderTenis(){
   $('#tenisStats').innerHTML=[stat('Jugados',jug),stat('Ganados',gan),stat('Perdidos',per),stat('Pendientes',pen),stat('Efectividad',efec,'%')].join('');
   $('#tenisTable').innerHTML=`<tr><th>Fecha</th><th>Torneo</th><th>Cat.</th><th>Rival</th><th>Estado</th><th>Resultado</th><th></th></tr>${t.length?t.map(x=>{const chip=x.estado==='gane'?'ok':x.estado==='perdi'?'danger':'muted';const txt=x.estado==='gane'?'Ganó':x.estado==='perdi'?'Perdió':'Pendiente';return `<tr><td class="strong">${fecha(x.fecha)}</td><td>${x.torneo||'—'}</td><td>${x.categoria||'—'}</td><td>${x.contrincante||'—'}</td><td><span class="chip ${chip}">${txt}</span></td><td>${x.resultado||'—'}</td><td style="text-align:right"><button class="btn danger sm" onclick="delRow('tenis','${x.id}',renderTenis)">✕</button></td></tr>`}).join(''):`<tr><td colspan="7"><div class="empty">Sin partidos cargados.</div></td></tr>`}`;
 }
-function opcOptions(arr){return arr.map(v=>`<option value="${v}">`).join('')}
-function openPartido(){const o=DB.tenisOpc;openModal(`<h2>Nuevo partido</h2><div class="modal-sub">Torneo, categoría y rival se guardan para reusarlos.</div><div class="field"><label>Fecha</label><input id="t-fecha" type="date" value="${hoy()}"></div><div class="field"><label>Torneo</label><input id="t-torneo" list="dl-torneos" placeholder="Escribí o elegí"><datalist id="dl-torneos">${opcOptions(o.torneos)}</datalist></div><div class="field-row"><div class="field"><label>Categoría</label><input id="t-cat" list="dl-cat" placeholder="Ej: 4ta"><datalist id="dl-cat">${opcOptions(o.categorias)}</datalist></div><div class="field"><label>Estado</label><select id="t-est"><option value="pendiente">Pendiente</option><option value="gane">Gané</option><option value="perdi">Perdí</option></select></div></div><div class="field"><label>Contrincante</label><input id="t-rival" list="dl-rivales" placeholder="Nombre del rival"><datalist id="dl-rivales">${opcOptions(o.contrincantes)}</datalist></div><div class="field"><label>Resultado</label><input id="t-res" placeholder="Ej: 6-3 6-4"></div><div class="field"><label>Observaciones</label><textarea id="t-obs" placeholder="Opcional"></textarea></div><div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="savePartido()">Guardar</button></div>`)}
+function tenisSelInner(arr,sel){
+  return `<option value="">— Elegí —</option>`+arr.map(o=>`<option value="${o.valor}" ${o.valor===sel?'selected':''}>${o.valor}</option>`).join('')+`<option value="__nueva__">➕ Agregar nueva…</option>`;
+}
+async function addOpcTenis(tipo){
+  const etiqueta={torneo:'opción de torneo',categoria:'categoría',contrincante:'rival'}[tipo];
+  const val=prompt('Nueva '+etiqueta+':');
+  if(!val||!val.trim())return null;
+  const v=val.trim();
+  const key={torneo:'torneos',categoria:'categorias',contrincante:'contrincantes'}[tipo];
+  if(DB.tenisOpc[key].some(o=>o.valor.toLowerCase()===v.toLowerCase()))return v;
+  const {data,error}=await sb.from('tenis_opciones').insert({tipo,valor:v}).select().single();
+  if(error){alert('Error: '+error.message);return null}
+  DB.tenisOpc[key].push({id:data.id,valor:data.valor});
+  DB.tenisOpc[key].sort((a,b)=>a.valor.localeCompare(b.valor));
+  return v;
+}
+async function onSelNueva(selId,tipo){
+  const el=$(selId);
+  if(el.value==='__nueva__'){
+    const v=await addOpcTenis(tipo);
+    const key={torneo:'torneos',categoria:'categorias',contrincante:'contrincantes'}[tipo];
+    el.innerHTML=tenisSelInner(DB.tenisOpc[key],v||'');
+  }
+}
+function openPartido(){const o=DB.tenisOpc;openModal(`<h2>Nuevo partido</h2><div class="modal-sub">Elegí de las listas o agregá nuevas opciones.</div>
+  <div class="field"><label>Fecha</label><input id="t-fecha" type="date" value="${hoy()}"></div>
+  <div class="field"><label>Torneo</label><select id="t-torneo" onchange="onSelNueva('#t-torneo','torneo')">${tenisSelInner(o.torneos,'')}</select></div>
+  <div class="field-row"><div class="field"><label>Categoría</label><select id="t-cat" onchange="onSelNueva('#t-cat','categoria')">${tenisSelInner(o.categorias,'')}</select></div>
+  <div class="field"><label>Estado</label><select id="t-est"><option value="pendiente">Pendiente</option><option value="gane">Gané</option><option value="perdi">Perdí</option></select></div></div>
+  <div class="field"><label>Contrincante</label><select id="t-rival" onchange="onSelNueva('#t-rival','contrincante')">${tenisSelInner(o.contrincantes,'')}</select></div>
+  <div class="field"><label>Resultado</label><input id="t-res" placeholder="Ej: 6-3 6-4"></div>
+  <div class="field"><label>Observaciones</label><textarea id="t-obs" placeholder="Opcional"></textarea></div>
+  <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="savePartido()">Guardar</button></div>`)}
 async function savePartido(){
-  const torneo=$('#t-torneo').value.trim(),categoria=$('#t-cat').value.trim(),contrincante=$('#t-rival').value.trim();
+  const clean=v=>(v==='__nueva__'?'':v);
+  const torneo=clean($('#t-torneo').value),categoria=clean($('#t-cat').value),contrincante=clean($('#t-rival').value);
   const row=await dbInsert('tenis',{fecha:$('#t-fecha').value||null,torneo,categoria,estado:$('#t-est').value,resultado:$('#t-res').value.trim(),contrincante,obs:$('#t-obs').value.trim()});
   DB.tenis.unshift({id:row.id,fecha:row.fecha,torneo:row.torneo||'',categoria:row.categoria||'',estado:row.estado,resultado:row.resultado||'',contrincante:row.contrincante||'',obs:row.obs||''});
-  const op=DB.tenisOpc;const nuevas=[];
-  if(torneo&&!op.torneos.includes(torneo)){op.torneos.push(torneo);nuevas.push({tipo:'torneo',valor:torneo})}
-  if(categoria&&!op.categorias.includes(categoria)){op.categorias.push(categoria);nuevas.push({tipo:'categoria',valor:categoria})}
-  if(contrincante&&!op.contrincantes.includes(contrincante)){op.contrincantes.push(contrincante);nuevas.push({tipo:'contrincante',valor:contrincante})}
-  if(nuevas.length){const {error}=await sb.from('tenis_opciones').upsert(nuevas,{onConflict:'user_id,tipo,valor',ignoreDuplicates:true});if(error)console.error(error)}
   closeModal();renderTenis()
+}
+/* ---- Gestión de opciones de tenis (alta/baja) ---- */
+function openOpcionesTenis(){renderOpcionesTenisModal()}
+function renderOpcionesTenisModal(){
+  const o=DB.tenisOpc;
+  const lista=(arr,tipo,titulo)=>`<div style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><label style="font-weight:600">${titulo}</label><button class="btn ghost sm" onclick="addOpcTenisModal('${tipo}')">+ Agregar</button></div>
+    <div class="list">${arr.length?arr.map(it=>`<div class="item" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px"><span>${it.valor}</span><button class="btn danger sm" onclick="delOpcTenis('${tipo}','${it.id}')">✕</button></div>`).join(''):'<div class="empty" style="padding:14px">Sin opciones cargadas.</div>'}</div></div>`;
+  openModal(`<h2>Opciones de tenis</h2><div class="modal-sub">Torneos, categorías y rivales para reutilizar al cargar partidos.</div>
+    ${lista(o.torneos,'torneo','Torneos')}${lista(o.categorias,'categoria','Categorías')}${lista(o.contrincantes,'contrincante','Rivales')}
+    <div class="modal-actions"><button class="btn" onclick="closeModal()">Listo</button></div>`);
+}
+async function addOpcTenisModal(tipo){await addOpcTenis(tipo);renderOpcionesTenisModal()}
+async function delOpcTenis(tipo,id){
+  const key={torneo:'torneos',categoria:'categorias',contrincante:'contrincantes'}[tipo];
+  const {error}=await sb.from('tenis_opciones').delete().eq('id',id);
+  if(error){alert('Error: '+error.message);return}
+  DB.tenisOpc[key]=DB.tenisOpc[key].filter(o=>o.id!==id);
+  renderOpcionesTenisModal();
 }
 
 /* =========================================================================
