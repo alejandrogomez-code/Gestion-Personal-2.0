@@ -497,8 +497,8 @@ function clone(o){return JSON.parse(JSON.stringify(o))}
    Supabase → Project Settings → API → "Project URL" y "anon public key".
    La anon key es pública por diseño; la seguridad la da RLS.
    ========================================================================= */
-const SUPABASE_URL  = 'https://TU-PROYECTO.supabase.co';
-const SUPABASE_ANON = 'TU-ANON-KEY';
+const SUPABASE_URL  = 'https://nmqwkdtscaoheilrqqni.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tcXdrZHRzY2FvaGVpbHJxcW5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzNTYwMzIsImV4cCI6MjA5NzkzMjAzMn0.ejP5O_7odFn0jb9_w181CvGVn_KMP_sm2mCjNtg8-ss';
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
