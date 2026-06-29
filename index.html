@@ -773,12 +773,12 @@ function objetivoCard(o,arch){
     }else if(o.tipo==='monto'){
       extra=`<div class="it-meta" style="margin-top:10px"><span>Ahorrado: <strong style="color:var(--ink)">${nMoney(p.tot)}</strong></span><span>Meta: ${nMoney(o.meta)}</span></div>
       <button class="btn ghost sm" style="margin-top:10px" onclick="openCarga('${o.id}')">+ Cargar importe</button>
-      ${(o.cargas&&o.cargas.length)?`<div class="tbl-wrap" style="margin-top:10px"><table><tr><th>Fecha</th><th>Importe</th><th></th></tr>${o.cargas.map(c=>`<tr><td>${fecha(c.fecha)}</td><td class="strong">${nMoney(c.monto)}</td><td style="text-align:right"><button class="btn danger sm" onclick="delCarga('${o.id}','${c.id}')">Quitar</button></td></tr>`).join('')}</table></div>`:''}`;
+      ${(o.cargas&&o.cargas.length)?`<div class="tbl-wrap" style="margin-top:10px"><table><tr><th>Fecha</th><th>Importe</th><th></th></tr>${o.cargas.map(c=>`<tr><td>${fecha(c.fecha)}</td><td class="strong">${nMoney(c.monto)}</td><td style="text-align:right;white-space:nowrap"><button class="btn ghost sm" onclick="openCarga('${o.id}','${c.id}')">Editar</button> <button class="btn danger sm" onclick="delCarga('${o.id}','${c.id}')">Quitar</button></td></tr>`).join('')}</table></div>`:''}`;
     }
   }
   const acciones = arch
     ? `<div style="margin-top:12px;display:flex;gap:8px"><button class="btn ghost sm" onclick="desarchivar('${o.id}')">Restaurar</button><button class="btn danger sm" onclick="delObjetivo('${o.id}')">Eliminar</button></div>`
-    : `<div style="margin-top:12px;display:flex;gap:8px"><button class="btn ghost sm" onclick="archivar('${o.id}')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;stroke:var(--ink-soft)"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg>Archivar</button><button class="btn danger sm" onclick="delObjetivo('${o.id}')">Eliminar</button></div>`;
+    : `<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost sm" onclick="openObjetivo('${o.id}')">Editar</button><button class="btn ghost sm" onclick="archivar('${o.id}')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;stroke:var(--ink-soft)"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg>Archivar</button><button class="btn danger sm" onclick="delObjetivo('${o.id}')">Eliminar</button></div>`;
   return `<div class="item"${arch?' style="opacity:.78"':''}><div class="it-top"><div><div class="it-title">${o.nombre}</div>${o.desc?`<div class="it-desc">${o.desc}</div>`:''}</div><span class="chip ${chip}">${est}</span></div>
     <div class="it-meta"><span>${p.info}</span><span>${fecha(o.inicio)} → ${fecha(o.limite)}</span><span><strong style="color:var(--ink)">${p.pct}%</strong></span></div>
     <div class="progress ${p.pct>=100?'full':''}"><span style="width:${p.pct}%"></span></div>${extra}${acciones}</div>`;
@@ -805,28 +805,84 @@ function toggleArchivados(){verArchivados=!verArchivados;renderObjetivos()}
 async function archivar(id){const o=DB.objetivos.find(x=>x.id===id);await dbUpdate('objetivos',id,{archivado:true});o.archivado=true;renderObjetivos();renderDashboard()}
 async function desarchivar(id){const o=DB.objetivos.find(x=>x.id===id);await dbUpdate('objetivos',id,{archivado:false});o.archivado=false;renderObjetivos();renderDashboard()}
 async function toggleCheck(id,i){const o=DB.objetivos.find(x=>x.id===id);o.checks[i]=o.checks[i]?0:1;renderObjetivos();await dbUpdate('objetivos',id,{checks:o.checks})}
-function openObjetivo(){
-  openModal(`<h2>Nuevo objetivo</h2><div class="modal-sub">Definí qué querés lograr y cómo medirlo.</div>
-    <div class="field"><label>Nombre</label><input id="f-nombre" placeholder="Ej: Correr 10 km"></div>
-    <div class="field"><label>Descripción breve</label><input id="f-desc" placeholder="Opcional"></div>
-    <div class="field"><label>Tipo de objetivo</label><select id="f-tipo" onchange="onTipoObj(this.value)"><option value="conteo">Conteo de hábitos</option><option value="monto">Monto de dinero</option><option value="otro">Otro</option></select></div>
-    <div class="field" id="f-meta-wrap"><label id="f-meta-lbl">Cantidad a cumplir (casilleros)</label><input id="f-meta" type="number" min="1" value="9"></div>
-    <div class="field-row"><div class="field"><label>Fecha de inicio</label><input id="f-inicio" type="date" value="${hoy()}"></div><div class="field"><label>Fecha límite</label><input id="f-limite" type="date"></div></div>
-    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveObjetivo()">Crear objetivo</button></div>`);
+function openObjetivo(id){
+  const o = id ? DB.objetivos.find(x=>x.id===id) : null;
+  const tipo = o?o.tipo:'conteo';
+  const metaInicial = o ? o.meta : (tipo==='monto'?500000:9);
+  const tipoSel = o
+    ? `<select id="f-tipo" disabled><option value="conteo" ${tipo==='conteo'?'selected':''}>Conteo de hábitos</option><option value="monto" ${tipo==='monto'?'selected':''}>Monto de dinero</option><option value="otro" ${tipo==='otro'?'selected':''}>Otro</option></select><div class="subhead" style="margin-top:4px">El tipo no se puede cambiar una vez creado el objetivo.</div>`
+    : `<select id="f-tipo" onchange="onTipoObj(this.value)"><option value="conteo">Conteo de hábitos</option><option value="monto">Monto de dinero</option><option value="otro">Otro</option></select>`;
+  const metaLbl = tipo==='monto'?'Monto objetivo ($)':'Cantidad a cumplir (casilleros)';
+  const metaWrapStyle = tipo==='otro'?'display:none':'';
+  openModal(`<h2>${o?'Editar objetivo':'Nuevo objetivo'}</h2><div class="modal-sub">Definí qué querés lograr y cómo medirlo.</div>
+    <div class="field"><label>Nombre</label><input id="f-nombre" placeholder="Ej: Correr 10 km" value="${o?esc(o.nombre):''}"></div>
+    <div class="field"><label>Descripción breve</label><input id="f-desc" placeholder="Opcional" value="${o?esc(o.desc||''):''}"></div>
+    <div class="field"><label>Tipo de objetivo</label>${tipoSel}</div>
+    <div class="field" id="f-meta-wrap" style="${metaWrapStyle}"><label id="f-meta-lbl">${metaLbl}</label><input id="f-meta" type="number" min="1" value="${metaInicial}"></div>
+    <div class="field-row"><div class="field"><label>Fecha de inicio</label><input id="f-inicio" type="date" value="${o?(o.inicio||hoy()):hoy()}"></div><div class="field"><label>Fecha límite</label><input id="f-limite" type="date" value="${o?(o.limite||''):''}"></div></div>
+    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveObjetivo(${o?`'${o.id}'`:'null'})">${o?'Guardar cambios':'Crear objetivo'}</button></div>`);
 }
 function onTipoObj(v){const w=$('#f-meta-wrap'),l=$('#f-meta-lbl'),i=$('#f-meta');if(v==='otro'){w.style.display='none'}else{w.style.display='block';l.textContent=v==='monto'?'Monto objetivo ($)':'Cantidad a cumplir (casilleros)';i.value=v==='monto'?500000:9}}
-async function saveObjetivo(){
+async function saveObjetivo(id){
   const nombre=$('#f-nombre').value.trim();if(!nombre)return alert('Poné un nombre.');
-  const tipo=$('#f-tipo').value,meta=Number($('#f-meta').value)||0;
-  const checks = tipo==='conteo' ? Array(Math.max(1,meta)).fill(0) : [];
-  const row=await dbInsert('objetivos',{nombre,descripcion:$('#f-desc').value.trim(),tipo,
-    inicio:$('#f-inicio').value||null,limite:$('#f-limite').value||null,meta,checks,pct_manual:0,archivado:false});
-  DB.objetivos.unshift({id:row.id,nombre:row.nombre,desc:row.descripcion,tipo:row.tipo,inicio:row.inicio,limite:row.limite,meta:Number(row.meta),checks:row.checks||[],pct:0,archivado:false,cargas:[]});
-  closeModal();renderObjetivos();renderDashboard()
+  const desc=$('#f-desc').value.trim();
+  const inicio=$('#f-inicio').value||null, limite=$('#f-limite').value||null;
+  if(id){
+    const o=DB.objetivos.find(x=>x.id===id); if(!o)return;
+    const meta=o.tipo==='otro'?o.meta:(Number($('#f-meta').value)||0);
+    const patch={nombre,descripcion:desc,inicio,limite,meta};
+    // Si es conteo y cambia la meta, ajustar checks preservando los marcados
+    let newChecks=o.checks;
+    if(o.tipo==='conteo' && meta && meta!==o.checks.length){
+      const cur=o.checks||[];
+      if(meta>cur.length){
+        newChecks=cur.concat(Array(meta-cur.length).fill(0));
+      }else{
+        // Preferimos preservar los marcados primero, luego los vacíos
+        const hechos=cur.filter(c=>c).length;
+        if(hechos>meta){
+          // Si la nueva meta es menor a lo hecho, cortamos pero todos quedan en hechos
+          newChecks=Array(meta).fill(1);
+        }else{
+          newChecks=Array(meta).fill(0);
+          for(let k=0;k<hechos;k++) newChecks[k]=1;
+        }
+      }
+      patch.checks=newChecks;
+    }
+    await dbUpdate('objetivos',id,patch);
+    Object.assign(o,{nombre,desc,inicio,limite,meta:Number(meta),checks:newChecks});
+  }else{
+    const tipo=$('#f-tipo').value, meta=Number($('#f-meta').value)||0;
+    const checks = tipo==='conteo' ? Array(Math.max(1,meta)).fill(0) : [];
+    const row=await dbInsert('objetivos',{nombre,descripcion:desc,tipo,
+      inicio,limite,meta,checks,pct_manual:0,archivado:false});
+    DB.objetivos.unshift({id:row.id,nombre:row.nombre,desc:row.descripcion,tipo:row.tipo,inicio:row.inicio,limite:row.limite,meta:Number(row.meta),checks:row.checks||[],pct:0,archivado:false,cargas:[]});
+  }
+  closeModal();renderObjetivos();renderDashboard();
 }
 async function delObjetivo(id){if(confirm('¿Eliminar este objetivo?')){await dbDelete('objetivos',id);DB.objetivos=DB.objetivos.filter(o=>o.id!==id);renderObjetivos();renderDashboard()}}
-function openCarga(id){openModal(`<h2>Cargar importe</h2><div class="modal-sub">Sumá lo que ahorraste.</div><div class="field-row"><div class="field"><label>Fecha</label><input id="c-fecha" type="date" value="${hoy()}"></div><div class="field"><label>Importe ($)</label><input id="c-monto" type="number" min="0" placeholder="0"></div></div><div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveCarga('${id}')">Guardar</button></div>`)}
-async function saveCarga(id){const o=DB.objetivos.find(x=>x.id===id);const monto=Number($('#c-monto').value);if(!monto)return alert('Ingresá un importe.');const row=await dbInsert('objetivo_cargas',{objetivo_id:id,fecha:$('#c-fecha').value||null,monto});o.cargas=o.cargas||[];o.cargas.push({id:row.id,fecha:row.fecha,monto:Number(row.monto)});closeModal();renderObjetivos()}
+function openCarga(oid,cid){
+  const o=DB.objetivos.find(x=>x.id===oid);
+  const c = cid ? (o.cargas||[]).find(x=>x.id===cid) : null;
+  openModal(`<h2>${c?'Editar carga':'Cargar importe'}</h2><div class="modal-sub">${c?'Modificá la fecha o el importe.':'Sumá lo que ahorraste.'}</div>
+    <div class="field-row"><div class="field"><label>Fecha</label><input id="c-fecha" type="date" value="${c?(c.fecha||''):hoy()}"></div>
+    <div class="field"><label>Importe ($)</label><input id="c-monto" type="number" min="0" placeholder="0" value="${c?c.monto:''}"></div></div>
+    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveCarga('${oid}',${c?`'${c.id}'`:'null'})">Guardar</button></div>`);
+}
+async function saveCarga(oid,cid){
+  const o=DB.objetivos.find(x=>x.id===oid);
+  const monto=Number($('#c-monto').value); if(!monto)return alert('Ingresá un importe.');
+  const fechaVal=$('#c-fecha').value||null;
+  if(cid){
+    await dbUpdate('objetivo_cargas',cid,{fecha:fechaVal,monto});
+    const c=o.cargas.find(x=>x.id===cid); Object.assign(c,{fecha:fechaVal,monto:Number(monto)});
+  }else{
+    const row=await dbInsert('objetivo_cargas',{objetivo_id:oid,fecha:fechaVal,monto});
+    o.cargas=o.cargas||[]; o.cargas.push({id:row.id,fecha:row.fecha,monto:Number(row.monto)});
+  }
+  closeModal();renderObjetivos();
+}
 async function delCarga(oid,cid){await dbDelete('objetivo_cargas',cid);const o=DB.objetivos.find(x=>x.id===oid);o.cargas=o.cargas.filter(c=>c.id!==cid);renderObjetivos()}
 
 /* =========================================================================
@@ -838,10 +894,29 @@ function renderActividad(){
   $('#hab-actividad').innerHTML=`<div class="stat-grid">${stat('Días con gimnasio',gym)}${stat('Promedio de pasos',nNum(prom))}${stat('Tenis registrado',tn)}${stat('Registros',a.length)}</div>
     <div class="panel"><div class="panel-head"><h2>Registros</h2><button class="btn sm" onclick="openActividad()"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14"/></svg>Nuevo</button></div>
     <div class="tbl-wrap"><table><tr><th>Fecha</th><th>Gym</th><th>Pasos</th><th>Tenis</th><th>Obs.</th><th></th></tr>
-    ${a.length?a.map(x=>`<tr><td class="strong">${fecha(x.fecha)}</td><td>${x.gym?'<span class="chip ok">Sí</span>':'<span class="chip muted">No</span>'}</td><td>${nNum(x.pasos)}</td><td>${x.tenis?'<span class="chip ok">Sí</span>':'<span class="chip muted">No</span>'}</td><td>${x.obs||'—'}</td><td style="text-align:right"><button class="btn danger sm" onclick="delRow('actividad','${x.id}',renderActividad)">✕</button></td></tr>`).join(''):`<tr><td colspan="6"><div class="empty">Sin registros.</div></td></tr>`}</table></div></div>`;
+    ${a.length?a.map(x=>`<tr><td class="strong">${fecha(x.fecha)}</td><td>${x.gym?'<span class="chip ok">Sí</span>':'<span class="chip muted">No</span>'}</td><td>${nNum(x.pasos)}</td><td>${x.tenis?'<span class="chip ok">Sí</span>':'<span class="chip muted">No</span>'}</td><td>${x.obs||'—'}</td><td style="text-align:right;white-space:nowrap"><button class="btn ghost sm" onclick="openActividad('${x.id}')">Editar</button> <button class="btn danger sm" onclick="delRow('actividad','${x.id}',renderActividad)">✕</button></td></tr>`).join(''):`<tr><td colspan="6"><div class="empty">Sin registros.</div></td></tr>`}</table></div></div>`;
 }
-function openActividad(){openModal(`<h2>Registro de actividad</h2><div class="modal-sub">¿Cómo te moviste hoy?</div><div class="field"><label>Fecha</label><input id="a-fecha" type="date" value="${hoy()}"></div><div class="field-row"><div class="field"><label>Gimnasio</label><select id="a-gym"><option value="no">No</option><option value="si">Sí</option></select></div><div class="field"><label>Tenis</label><select id="a-tenis"><option value="no">No</option><option value="si">Sí</option></select></div></div><div class="field"><label>Pasos del día</label><input id="a-pasos" type="number" min="0" placeholder="0"></div><div class="field"><label>Observaciones</label><textarea id="a-obs" placeholder="Opcional"></textarea></div><div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveActividad()">Guardar</button></div>`)}
-async function saveActividad(){const row=await dbInsert('actividad',{fecha:$('#a-fecha').value||null,gym:$('#a-gym').value==='si',pasos:Number($('#a-pasos').value)||0,tenis:$('#a-tenis').value==='si',obs:$('#a-obs').value.trim()});DB.actividad.unshift({id:row.id,fecha:row.fecha,gym:row.gym,pasos:row.pasos,tenis:row.tenis,obs:row.obs||''});closeModal();renderActividad()}
+function openActividad(id){
+  const a = id ? DB.actividad.find(x=>x.id===id) : null;
+  openModal(`<h2>${a?'Editar actividad':'Registro de actividad'}</h2><div class="modal-sub">¿Cómo te moviste hoy?</div>
+    <div class="field"><label>Fecha</label><input id="a-fecha" type="date" value="${a?(a.fecha||''):hoy()}"></div>
+    <div class="field-row"><div class="field"><label>Gimnasio</label><select id="a-gym"><option value="no" ${a&&!a.gym?'selected':''}>No</option><option value="si" ${a&&a.gym?'selected':''}>Sí</option></select></div>
+    <div class="field"><label>Tenis</label><select id="a-tenis"><option value="no" ${a&&!a.tenis?'selected':''}>No</option><option value="si" ${a&&a.tenis?'selected':''}>Sí</option></select></div></div>
+    <div class="field"><label>Pasos del día</label><input id="a-pasos" type="number" min="0" placeholder="0" value="${a?(a.pasos||0):''}"></div>
+    <div class="field"><label>Observaciones</label><textarea id="a-obs" placeholder="Opcional">${a?esc(a.obs||''):''}</textarea></div>
+    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveActividad(${a?`'${a.id}'`:'null'})">Guardar</button></div>`);
+}
+async function saveActividad(id){
+  const patch={fecha:$('#a-fecha').value||null,gym:$('#a-gym').value==='si',pasos:Number($('#a-pasos').value)||0,tenis:$('#a-tenis').value==='si',obs:$('#a-obs').value.trim()};
+  if(id){
+    await dbUpdate('actividad',id,patch);
+    Object.assign(DB.actividad.find(x=>x.id===id),patch);
+  }else{
+    const row=await dbInsert('actividad',patch);
+    DB.actividad.unshift({id:row.id,fecha:row.fecha,gym:row.gym,pasos:row.pasos,tenis:row.tenis,obs:row.obs||''});
+  }
+  closeModal();renderActividad();
+}
 
 function imc(p){return p/(ESTATURA*ESTATURA)}
 function imcCat(v){return v<18.5?'Bajo':v<25?'Normal':v<30?'Sobrepeso':'Obesidad'}
@@ -850,22 +925,67 @@ function renderPeso(){
   $('#hab-peso').innerHTML=`<div class="stat-grid">${stat('Último peso',ult?nNum(ult.peso,3):'—','kg')}${stat('Último IMC',ult?nNum(imc(ult.peso),1):'—',ult?imcCat(imc(ult.peso)):'')}${stat('Última cintura',ult?nNum(ult.cintura):'—','cm')}${stat('Registros',p.length)}</div>
     <div class="panel"><div class="panel-head"><h2>Evolución del peso<span class="sub">Estatura: 1,78 m</span></h2><button class="btn sm" onclick="openPeso()"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14"/></svg>Nuevo</button></div><div style="height:200px"><canvas id="pesoChart"></canvas></div></div>
     <div class="panel"><div class="panel-head"><h2>Histórico</h2></div><div class="tbl-wrap"><table><tr><th>Fecha</th><th>Peso (kg)</th><th>Cintura (cm)</th><th>IMC</th><th></th></tr>
-    ${p.length?p.slice().reverse().map(x=>`<tr><td class="strong">${fecha(x.fecha)}</td><td>${nNum(x.peso,3)}</td><td>${nNum(x.cintura)}</td><td>${nNum(imc(x.peso),1)} <span class="chip ${imc(x.peso)<25?'ok':'warn'}">${imcCat(imc(x.peso))}</span></td><td style="text-align:right"><button class="btn danger sm" onclick="delRow('peso','${x.id}',renderPeso)">✕</button></td></tr>`).join(''):`<tr><td colspan="5"><div class="empty">Sin registros.</div></td></tr>`}</table></div></div>`;
+    ${p.length?p.slice().reverse().map(x=>`<tr><td class="strong">${fecha(x.fecha)}</td><td>${nNum(x.peso,3)}</td><td>${nNum(x.cintura)}</td><td>${nNum(imc(x.peso),1)} <span class="chip ${imc(x.peso)<25?'ok':'warn'}">${imcCat(imc(x.peso))}</span></td><td style="text-align:right;white-space:nowrap"><button class="btn ghost sm" onclick="openPeso('${x.id}')">Editar</button> <button class="btn danger sm" onclick="delRow('peso','${x.id}',renderPeso)">✕</button></td></tr>`).join(''):`<tr><td colspan="5"><div class="empty">Sin registros.</div></td></tr>`}</table></div></div>`;
   drawPesoChart()
 }
 let pesoChartRef=null;
 function drawPesoChart(){const cv=$('#pesoChart');if(!cv)return;const p=DB.peso.slice().sort((a,b)=>a.fecha<b.fecha?-1:1);if(pesoChartRef)pesoChartRef.destroy();pesoChartRef=new Chart(cv,{type:'line',data:{labels:p.map(x=>fecha(x.fecha).slice(0,5)),datasets:[{data:p.map(x=>x.peso),borderColor:'#b4653e',backgroundColor:'rgba(180,101,62,.08)',fill:true,tension:.35,borderWidth:2,pointRadius:3,pointBackgroundColor:'#b4653e'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'#ece7dc'},ticks:{color:'#a39c8f'}},x:{grid:{display:false},ticks:{color:'#a39c8f'}}}}})}
-function openPeso(){openModal(`<h2>Registro de peso</h2><div class="modal-sub">El IMC se calcula solo (estatura 1,78 m).</div><div class="field"><label>Fecha</label><input id="w-fecha" type="date" value="${hoy()}"></div><div class="field-row"><div class="field"><label>Peso (kg, 3 decimales)</label><input id="w-peso" type="number" step="0.001" placeholder="81,200"></div><div class="field"><label>Cintura (cm)</label><input id="w-cint" type="number" placeholder="90"></div></div><div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="savePeso()">Guardar</button></div>`)}
-async function savePeso(){const peso=Number($('#w-peso').value);if(!peso)return alert('Ingresá el peso.');const row=await dbInsert('peso',{fecha:$('#w-fecha').value||null,peso,cintura:Number($('#w-cint').value)||0});DB.peso.push({id:row.id,fecha:row.fecha,peso:Number(row.peso),cintura:Number(row.cintura)});closeModal();renderPeso()}
+function openPeso(id){
+  const w = id ? DB.peso.find(x=>x.id===id) : null;
+  openModal(`<h2>${w?'Editar peso':'Registro de peso'}</h2><div class="modal-sub">El IMC se calcula solo (estatura 1,78 m).</div>
+    <div class="field"><label>Fecha</label><input id="w-fecha" type="date" value="${w?(w.fecha||''):hoy()}"></div>
+    <div class="field-row"><div class="field"><label>Peso (kg, 3 decimales)</label><input id="w-peso" type="number" step="0.001" placeholder="81,200" value="${w?w.peso:''}"></div>
+    <div class="field"><label>Cintura (cm)</label><input id="w-cint" type="number" placeholder="90" value="${w?(w.cintura||''):''}"></div></div>
+    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="savePeso(${w?`'${w.id}'`:'null'})">Guardar</button></div>`);
+}
+async function savePeso(id){
+  const peso=Number($('#w-peso').value); if(!peso)return alert('Ingresá el peso.');
+  const patch={fecha:$('#w-fecha').value||null,peso,cintura:Number($('#w-cint').value)||0};
+  if(id){
+    await dbUpdate('peso',id,patch);
+    const w=DB.peso.find(x=>x.id===id); Object.assign(w,{fecha:patch.fecha,peso:Number(patch.peso),cintura:Number(patch.cintura)});
+    DB.peso.sort((a,b)=>(a.fecha||'')<(b.fecha||'')?-1:1);
+  }else{
+    const row=await dbInsert('peso',patch);
+    DB.peso.push({id:row.id,fecha:row.fecha,peso:Number(row.peso),cintura:Number(row.cintura)});
+  }
+  closeModal();renderPeso();
+}
 
 function renderLectura(){
   const l=DB.lectura;const term=l.filter(x=>x.estado==='terminado');const ley=l.filter(x=>x.estado==='leyendo').length;const punt=term.filter(x=>x.puntaje).length;const prom=punt?(term.reduce((s,x)=>s+(x.puntaje||0),0)/punt):0;
   $('#hab-lectura').innerHTML=`<div class="stat-grid">${stat('Libros leídos',term.length)}${stat('En curso',ley)}${stat('Promedio puntaje',prom?nNum(prom,1):'—',prom?'/ 5':'')}${stat('Total cargados',l.length)}</div>
     <div class="panel"><div class="panel-head"><h2>Mis libros</h2><button class="btn sm" onclick="openLibro()"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14"/></svg>Nuevo</button></div>
-    <div class="list">${l.length?l.map(x=>{const chip=x.estado==='terminado'?'ok':x.estado==='leyendo'?'info':'muted';const e=x.estado==='terminado'?'Terminado':x.estado==='leyendo'?'Leyendo':'Pendiente';return `<div class="item"><div class="it-top"><div><div class="it-title">${x.titulo}</div><div class="it-desc">${x.autor||'—'}</div></div><span class="chip ${chip}">${e}</span></div><div class="it-meta"><span>${fecha(x.inicio)} → ${x.fin?fecha(x.fin):'…'}</span>${x.puntaje?`<span>${'★'.repeat(x.puntaje)}${'☆'.repeat(5-x.puntaje)}</span>`:''}</div>${x.detalle?`<div class="it-desc" style="margin-top:6px">"${x.detalle}"</div>`:''}<div style="margin-top:10px"><button class="btn danger sm" onclick="delRow('lectura','${x.id}',renderLectura)">Eliminar</button></div></div>`}).join(''):empty('Todavía no cargaste libros.')}</div></div>`;
+    <div class="list">${l.length?l.map(x=>{const chip=x.estado==='terminado'?'ok':x.estado==='leyendo'?'info':'muted';const e=x.estado==='terminado'?'Terminado':x.estado==='leyendo'?'Leyendo':'Pendiente';return `<div class="item"><div class="it-top"><div><div class="it-title">${x.titulo}</div><div class="it-desc">${x.autor||'—'}</div></div><span class="chip ${chip}">${e}</span></div><div class="it-meta"><span>${fecha(x.inicio)} → ${x.fin?fecha(x.fin):'…'}</span>${x.puntaje?`<span>${'★'.repeat(x.puntaje)}${'☆'.repeat(5-x.puntaje)}</span>`:''}</div>${x.detalle?`<div class="it-desc" style="margin-top:6px">"${x.detalle}"</div>`:''}<div style="margin-top:10px;display:flex;gap:8px"><button class="btn ghost sm" onclick="openLibro('${x.id}')">Editar</button><button class="btn danger sm" onclick="delRow('lectura','${x.id}',renderLectura)">Eliminar</button></div></div>`}).join(''):empty('Todavía no cargaste libros.')}</div></div>`;
 }
-function openLibro(){openModal(`<h2>Nuevo libro</h2><div class="modal-sub">Registrá tu lectura.</div><div class="field"><label>Título</label><input id="b-tit" placeholder="Título del libro"></div><div class="field"><label>Autor</label><input id="b-aut" placeholder="Autor"></div><div class="field-row"><div class="field"><label>Inicio</label><input id="b-ini" type="date" value="${hoy()}"></div><div class="field"><label>Finalización</label><input id="b-fin" type="date"></div></div><div class="field-row"><div class="field"><label>Estado</label><select id="b-est"><option value="pendiente">Pendiente</option><option value="leyendo">Leyendo</option><option value="terminado">Terminado</option></select></div><div class="field"><label>Puntaje (1-5)</label><select id="b-pun"><option value="0">—</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div></div><div class="field"><label>Detalle / comentario</label><textarea id="b-det" placeholder="Opcional"></textarea></div><div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveLibro()">Guardar</button></div>`)}
-async function saveLibro(){const t=$('#b-tit').value.trim();if(!t)return alert('Poné un título.');const row=await dbInsert('lectura',{titulo:t,autor:$('#b-aut').value.trim(),inicio:$('#b-ini').value||null,fin:$('#b-fin').value||null,estado:$('#b-est').value,puntaje:Number($('#b-pun').value),detalle:$('#b-det').value.trim()});DB.lectura.unshift({id:row.id,titulo:row.titulo,autor:row.autor||'',inicio:row.inicio,fin:row.fin||'',estado:row.estado,puntaje:row.puntaje,detalle:row.detalle||''});closeModal();renderLectura()}
+function openLibro(id){
+  const b = id ? DB.lectura.find(x=>x.id===id) : null;
+  const estOpts = ['pendiente','leyendo','terminado'];
+  const estLbl  = {pendiente:'Pendiente',leyendo:'Leyendo',terminado:'Terminado'};
+  const puntOpts = [0,1,2,3,4,5];
+  openModal(`<h2>${b?'Editar libro':'Nuevo libro'}</h2><div class="modal-sub">Registrá tu lectura.</div>
+    <div class="field"><label>Título</label><input id="b-tit" placeholder="Título del libro" value="${b?esc(b.titulo):''}"></div>
+    <div class="field"><label>Autor</label><input id="b-aut" placeholder="Autor" value="${b?esc(b.autor||''):''}"></div>
+    <div class="field-row"><div class="field"><label>Inicio</label><input id="b-ini" type="date" value="${b?(b.inicio||''):hoy()}"></div>
+    <div class="field"><label>Finalización</label><input id="b-fin" type="date" value="${b?(b.fin||''):''}"></div></div>
+    <div class="field-row"><div class="field"><label>Estado</label><select id="b-est">${estOpts.map(e=>`<option value="${e}" ${b&&b.estado===e?'selected':''}>${estLbl[e]}</option>`).join('')}</select></div>
+    <div class="field"><label>Puntaje (1-5)</label><select id="b-pun">${puntOpts.map(p=>`<option value="${p}" ${b&&(b.puntaje||0)===p?'selected':''}>${p===0?'—':p}</option>`).join('')}</select></div></div>
+    <div class="field"><label>Detalle / comentario</label><textarea id="b-det" placeholder="Opcional">${b?esc(b.detalle||''):''}</textarea></div>
+    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveLibro(${b?`'${b.id}'`:'null'})">Guardar</button></div>`);
+}
+async function saveLibro(id){
+  const t=$('#b-tit').value.trim(); if(!t)return alert('Poné un título.');
+  const patch={titulo:t,autor:$('#b-aut').value.trim(),inicio:$('#b-ini').value||null,fin:$('#b-fin').value||null,estado:$('#b-est').value,puntaje:Number($('#b-pun').value),detalle:$('#b-det').value.trim()};
+  if(id){
+    await dbUpdate('lectura',id,patch);
+    const b=DB.lectura.find(x=>x.id===id);
+    Object.assign(b,{titulo:patch.titulo,autor:patch.autor,inicio:patch.inicio,fin:patch.fin||'',estado:patch.estado,puntaje:patch.puntaje,detalle:patch.detalle});
+  }else{
+    const row=await dbInsert('lectura',patch);
+    DB.lectura.unshift({id:row.id,titulo:row.titulo,autor:row.autor||'',inicio:row.inicio,fin:row.fin||'',estado:row.estado,puntaje:row.puntaje,detalle:row.detalle||''});
+  }
+  closeModal();renderLectura();
+}
 
 /* =========================================================================
    3) TRABAJO — A) Contador Público   B) Desarrollo de Fondos
@@ -913,7 +1033,7 @@ function panelClientes(){
   const cli=DB.cp.clientes;
   const rows = cli.length ? cli.map(c=>{
     const pers=DB.cp.personal.filter(p=>p.cliente_id===c.id);
-    const persTxt = pers.length ? pers.map(p=>`<span class="chip muted" style="margin:2px 3px;display:inline-block">${esc(p.nombre)} <a onclick="delPersonal('${p.id}')" style="cursor:pointer;color:var(--danger);font-weight:700">✕</a></span>`).join('') : '<span class="subhead">Sin personal</span>';
+    const persTxt = pers.length ? pers.map(p=>`<span class="chip muted" style="margin:2px 3px;display:inline-block">${esc(p.nombre)} <a onclick="editPersonal('${p.id}')" style="cursor:pointer;color:var(--accent);font-weight:700;margin-left:4px" title="Editar nombre">✎</a> <a onclick="delPersonal('${p.id}')" style="cursor:pointer;color:var(--danger);font-weight:700">✕</a></span>`).join('') : '<span class="subhead">Sin personal</span>';
     return `<tr><td class="strong">${esc(c.nombre)}</td><td>${esc(c.cuit)||'—'}</td><td>${esc(c.clave)||'—'}</td><td>${persTxt}</td>
       <td style="text-align:right;white-space:nowrap"><button class="btn ghost sm" onclick="addPersonal('${c.id}')">+ Personal</button> <button class="btn ghost sm" onclick="openCliente('${c.id}')">Editar</button> <button class="btn danger sm" onclick="delCliente('${c.id}')">✕</button></td></tr>`;
   }).join('') : `<tr><td colspan="5"><div class="empty">Todavía no cargaste clientes.</div></td></tr>`;
@@ -958,6 +1078,17 @@ async function delPersonal(id){
   await dbDelete('cp_personal',id);
   DB.cp.personal=DB.cp.personal.filter(p=>p.id!==id);
   DB.cp.liquidaciones=DB.cp.liquidaciones.filter(l=>l.personal_id!==id);
+  renderContador();
+}
+async function editPersonal(id){
+  const p=DB.cp.personal.find(x=>x.id===id); if(!p)return;
+  const nombre=prompt('Nombre del personal:',p.nombre);
+  if(!nombre||!nombre.trim()) return;
+  const nuevo=nombre.trim();
+  if(nuevo===p.nombre) return;
+  await dbUpdate('cp_personal',id,{nombre:nuevo});
+  p.nombre=nuevo;
+  DB.cp.personal.sort((a,b)=>a.nombre.localeCompare(b.nombre));
   renderContador();
 }
 
@@ -1048,7 +1179,7 @@ async function delHonorario(clienteId,mes){
 function renderTenis(){
   const t=DB.tenis;const jug=t.length;const gan=t.filter(x=>x.estado==='gane').length;const per=t.filter(x=>x.estado==='perdi').length;const pen=t.filter(x=>x.estado==='pendiente').length;const fin=gan+per;const efec=fin?Math.round(gan/fin*100):0;
   $('#tenisStats').innerHTML=[stat('Jugados',jug),stat('Ganados',gan),stat('Perdidos',per),stat('Pendientes',pen),stat('Efectividad',efec,'%')].join('');
-  $('#tenisTable').innerHTML=`<tr><th>Fecha</th><th>Torneo</th><th>Cat.</th><th>Rival</th><th>Estado</th><th>Resultado</th><th></th></tr>${t.length?t.map(x=>{const chip=x.estado==='gane'?'ok':x.estado==='perdi'?'danger':'muted';const txt=x.estado==='gane'?'Ganó':x.estado==='perdi'?'Perdió':'Pendiente';return `<tr><td class="strong">${fecha(x.fecha)}</td><td>${x.torneo||'—'}</td><td>${x.categoria||'—'}</td><td>${x.contrincante||'—'}</td><td><span class="chip ${chip}">${txt}</span></td><td>${x.resultado||'—'}</td><td style="text-align:right"><button class="btn danger sm" onclick="delRow('tenis','${x.id}',renderTenis)">✕</button></td></tr>`}).join(''):`<tr><td colspan="7"><div class="empty">Sin partidos cargados.</div></td></tr>`}`;
+  $('#tenisTable').innerHTML=`<tr><th>Fecha</th><th>Torneo</th><th>Cat.</th><th>Rival</th><th>Estado</th><th>Resultado</th><th></th></tr>${t.length?t.map(x=>{const chip=x.estado==='gane'?'ok':x.estado==='perdi'?'danger':'muted';const txt=x.estado==='gane'?'Ganó':x.estado==='perdi'?'Perdió':'Pendiente';return `<tr><td class="strong">${fecha(x.fecha)}</td><td>${x.torneo||'—'}</td><td>${x.categoria||'—'}</td><td>${x.contrincante||'—'}</td><td><span class="chip ${chip}">${txt}</span></td><td>${x.resultado||'—'}</td><td style="text-align:right;white-space:nowrap"><button class="btn ghost sm" onclick="openPartido('${x.id}')">Editar</button> <button class="btn danger sm" onclick="delRow('tenis','${x.id}',renderTenis)">✕</button></td></tr>`}).join(''):`<tr><td colspan="7"><div class="empty">Sin partidos cargados.</div></td></tr>`}`;
 }
 function tenisSelInner(arr,sel){
   return `<option value="">— Elegí —</option>`+arr.map(o=>`<option value="${o.valor}" ${o.valor===sel?'selected':''}>${o.valor}</option>`).join('')+`<option value="__nueva__">➕ Agregar nueva…</option>`;
@@ -1074,21 +1205,32 @@ async function onSelNueva(selId,tipo){
     el.innerHTML=tenisSelInner(DB.tenisOpc[key],v||'');
   }
 }
-function openPartido(){const o=DB.tenisOpc;openModal(`<h2>Nuevo partido</h2><div class="modal-sub">Elegí de las listas o agregá nuevas opciones.</div>
-  <div class="field"><label>Fecha</label><input id="t-fecha" type="date" value="${hoy()}"></div>
-  <div class="field"><label>Torneo</label><select id="t-torneo" onchange="onSelNueva('#t-torneo','torneo')">${tenisSelInner(o.torneos,'')}</select></div>
-  <div class="field-row"><div class="field"><label>Categoría</label><select id="t-cat" onchange="onSelNueva('#t-cat','categoria')">${tenisSelInner(o.categorias,'')}</select></div>
-  <div class="field"><label>Estado</label><select id="t-est"><option value="pendiente">Pendiente</option><option value="gane">Gané</option><option value="perdi">Perdí</option></select></div></div>
-  <div class="field"><label>Contrincante</label><select id="t-rival" onchange="onSelNueva('#t-rival','contrincante')">${tenisSelInner(o.contrincantes,'')}</select></div>
-  <div class="field"><label>Resultado</label><input id="t-res" placeholder="Ej: 6-3 6-4"></div>
-  <div class="field"><label>Observaciones</label><textarea id="t-obs" placeholder="Opcional"></textarea></div>
-  <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="savePartido()">Guardar</button></div>`)}
-async function savePartido(){
+function openPartido(id){
+  const o=DB.tenisOpc; const t = id ? DB.tenis.find(x=>x.id===id) : null;
+  const estOpts = ['pendiente','gane','perdi'];
+  const estLbl  = {pendiente:'Pendiente',gane:'Gané',perdi:'Perdí'};
+  openModal(`<h2>${t?'Editar partido':'Nuevo partido'}</h2><div class="modal-sub">Elegí de las listas o agregá nuevas opciones.</div>
+  <div class="field"><label>Fecha</label><input id="t-fecha" type="date" value="${t?(t.fecha||''):hoy()}"></div>
+  <div class="field"><label>Torneo</label><select id="t-torneo" onchange="onSelNueva('#t-torneo','torneo')">${tenisSelInner(o.torneos,t?t.torneo:'')}</select></div>
+  <div class="field-row"><div class="field"><label>Categoría</label><select id="t-cat" onchange="onSelNueva('#t-cat','categoria')">${tenisSelInner(o.categorias,t?t.categoria:'')}</select></div>
+  <div class="field"><label>Estado</label><select id="t-est">${estOpts.map(e=>`<option value="${e}" ${t&&t.estado===e?'selected':''}>${estLbl[e]}</option>`).join('')}</select></div></div>
+  <div class="field"><label>Contrincante</label><select id="t-rival" onchange="onSelNueva('#t-rival','contrincante')">${tenisSelInner(o.contrincantes,t?t.contrincante:'')}</select></div>
+  <div class="field"><label>Resultado</label><input id="t-res" placeholder="Ej: 6-3 6-4" value="${t?esc(t.resultado||''):''}"></div>
+  <div class="field"><label>Observaciones</label><textarea id="t-obs" placeholder="Opcional">${t?esc(t.obs||''):''}</textarea></div>
+  <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="savePartido(${t?`'${t.id}'`:'null'})">Guardar</button></div>`);
+}
+async function savePartido(id){
   const clean=v=>(v==='__nueva__'?'':v);
   const torneo=clean($('#t-torneo').value),categoria=clean($('#t-cat').value),contrincante=clean($('#t-rival').value);
-  const row=await dbInsert('tenis',{fecha:$('#t-fecha').value||null,torneo,categoria,estado:$('#t-est').value,resultado:$('#t-res').value.trim(),contrincante,obs:$('#t-obs').value.trim()});
-  DB.tenis.unshift({id:row.id,fecha:row.fecha,torneo:row.torneo||'',categoria:row.categoria||'',estado:row.estado,resultado:row.resultado||'',contrincante:row.contrincante||'',obs:row.obs||''});
-  closeModal();renderTenis()
+  const patch={fecha:$('#t-fecha').value||null,torneo,categoria,estado:$('#t-est').value,resultado:$('#t-res').value.trim(),contrincante,obs:$('#t-obs').value.trim()};
+  if(id){
+    await dbUpdate('tenis',id,patch);
+    Object.assign(DB.tenis.find(x=>x.id===id),patch);
+  }else{
+    const row=await dbInsert('tenis',patch);
+    DB.tenis.unshift({id:row.id,fecha:row.fecha,torneo:row.torneo||'',categoria:row.categoria||'',estado:row.estado,resultado:row.resultado||'',contrincante:row.contrincante||'',obs:row.obs||''});
+  }
+  closeModal();renderTenis();
 }
 /* ---- Gestión de opciones de tenis (alta/baja) ---- */
 function openOpcionesTenis(){renderOpcionesTenisModal()}
@@ -1096,12 +1238,40 @@ function renderOpcionesTenisModal(){
   const o=DB.tenisOpc;
   const lista=(arr,tipo,titulo)=>`<div style="margin-bottom:16px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><label style="font-weight:600">${titulo}</label><button class="btn ghost sm" onclick="addOpcTenisModal('${tipo}')">+ Agregar</button></div>
-    <div class="list">${arr.length?arr.map(it=>`<div class="item" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px"><span>${it.valor}</span><button class="btn danger sm" onclick="delOpcTenis('${tipo}','${it.id}')">✕</button></div>`).join(''):'<div class="empty" style="padding:14px">Sin opciones cargadas.</div>'}</div></div>`;
+    <div class="list">${arr.length?arr.map(it=>`<div class="item" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px"><span>${esc(it.valor)}</span><div style="display:flex;gap:6px"><button class="btn ghost sm" onclick="renameOpcTenis('${tipo}','${it.id}')">Editar</button><button class="btn danger sm" onclick="delOpcTenis('${tipo}','${it.id}')">✕</button></div></div>`).join(''):'<div class="empty" style="padding:14px">Sin opciones cargadas.</div>'}</div></div>`;
   openModal(`<h2>Opciones de tenis</h2><div class="modal-sub">Torneos, categorías y rivales para reutilizar al cargar partidos.</div>
     ${lista(o.torneos,'torneo','Torneos')}${lista(o.categorias,'categoria','Categorías')}${lista(o.contrincantes,'contrincante','Rivales')}
     <div class="modal-actions"><button class="btn" onclick="closeModal()">Listo</button></div>`);
 }
 async function addOpcTenisModal(tipo){await addOpcTenis(tipo);renderOpcionesTenisModal()}
+async function renameOpcTenis(tipo,id){
+  const key={torneo:'torneos',categoria:'categorias',contrincante:'contrincantes'}[tipo];
+  const it=DB.tenisOpc[key].find(o=>o.id===id); if(!it)return;
+  const val=prompt('Nuevo nombre:',it.valor);
+  if(!val||!val.trim())return;
+  const nuevo=val.trim();
+  if(nuevo===it.valor)return;
+  // Evitar duplicados con otro registro
+  if(DB.tenisOpc[key].some(o=>o.id!==id && o.valor.toLowerCase()===nuevo.toLowerCase())){
+    alert('Ya existe una opción con ese nombre.');return;
+  }
+  const viejo=it.valor;
+  // 1) Actualizar la opción
+  const {error}=await sb.from('tenis_opciones').update({valor:nuevo}).eq('id',id);
+  if(error){alert('Error: '+error.message);return}
+  it.valor=nuevo;
+  DB.tenisOpc[key].sort((a,b)=>a.valor.localeCompare(b.valor));
+  // 2) Propagar el cambio a los partidos que usaban el valor viejo
+  const campo=tipo==='torneo'?'torneo':tipo==='categoria'?'categoria':'contrincante';
+  const afectados=DB.tenis.filter(p=>p[campo]===viejo);
+  if(afectados.length){
+    const {error:e2}=await sb.from('tenis').update({[campo]:nuevo}).eq(campo,viejo);
+    if(e2){alert('Error actualizando partidos: '+e2.message);return}
+    afectados.forEach(p=>{p[campo]=nuevo});
+  }
+  renderOpcionesTenisModal();
+  if(current==='tenis')renderTenis();
+}
 async function delOpcTenis(tipo,id){
   const key={torneo:'torneos',categoria:'categorias',contrincante:'contrincantes'}[tipo];
   const {error}=await sb.from('tenis_opciones').delete().eq('id',id);
@@ -1133,14 +1303,35 @@ function renderRecordatorios(){
         <td><div class="rec-task">${x.tarea}</div>${x.obs?`<div class="rec-obs">${x.obs}</div>`:''}</td>
         <td>${fecha(x.venc)}</td>
         <td><span class="chip ${chip}">${txt}</span></td>
-        <td><div class="rec-actions">${x.estado!=='completado'?`<button class="btn ghost sm" onclick="completarRec('${x.id}')">Completar</button>`:''}<button class="btn danger sm" onclick="delRow('recordatorios','${x.id}',renderRecordatorios)">✕</button></div></td>
+        <td><div class="rec-actions">${x.estado!=='completado'?`<button class="btn ghost sm" onclick="completarRec('${x.id}')">Completar</button>`:''}<button class="btn ghost sm" onclick="openRecordatorio('${x.id}')">Editar</button><button class="btn danger sm" onclick="delRow('recordatorios','${x.id}',renderRecordatorios)">✕</button></div></td>
       </tr>`;
     }).join(''):`<tr><td colspan="4"><div class="empty">No tenés recordatorios cargados.</div></td></tr>`
   }`;
 }
 async function completarRec(id){const x=DB.recordatorios.find(r=>r.id===id);x.estado='completado';renderRecordatorios();await dbUpdate('recordatorios',id,{estado:'completado'})}
-function openRecordatorio(){openModal(`<h2>Nuevo recordatorio</h2><div class="modal-sub">Algo que no se te puede pasar.</div><div class="field"><label>Tarea</label><input id="r-tarea" placeholder="¿Qué tenés que hacer?"></div><div class="field-row"><div class="field"><label>Vencimiento</label><input id="r-venc" type="date" value="${hoy()}"></div><div class="field"><label>Estado</label><select id="r-est"><option value="pendiente">Pendiente</option><option value="enproceso">En proceso</option><option value="completado">Completado</option></select></div></div><div class="field"><label>Observaciones</label><textarea id="r-obs" placeholder="Opcional"></textarea></div><div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveRecordatorio()">Guardar</button></div>`)}
-async function saveRecordatorio(){const t=$('#r-tarea').value.trim();if(!t)return alert('Escribí la tarea.');const row=await dbInsert('recordatorios',{tarea:t,venc:$('#r-venc').value||null,estado:$('#r-est').value,obs:$('#r-obs').value.trim()});DB.recordatorios.unshift({id:row.id,tarea:row.tarea,venc:row.venc,estado:row.estado,obs:row.obs||''});closeModal();renderRecordatorios();renderDashboard()}
+function openRecordatorio(id){
+  const r = id ? DB.recordatorios.find(x=>x.id===id) : null;
+  const estOpts = ['pendiente','enproceso','completado'];
+  const estLbl  = {pendiente:'Pendiente',enproceso:'En proceso',completado:'Completado'};
+  openModal(`<h2>${r?'Editar recordatorio':'Nuevo recordatorio'}</h2><div class="modal-sub">Algo que no se te puede pasar.</div>
+    <div class="field"><label>Tarea</label><input id="r-tarea" placeholder="¿Qué tenés que hacer?" value="${r?esc(r.tarea):''}"></div>
+    <div class="field-row"><div class="field"><label>Vencimiento</label><input id="r-venc" type="date" value="${r?(r.venc||''):hoy()}"></div>
+    <div class="field"><label>Estado</label><select id="r-est">${estOpts.map(e=>`<option value="${e}" ${r&&r.estado===e?'selected':''}>${estLbl[e]}</option>`).join('')}</select></div></div>
+    <div class="field"><label>Observaciones</label><textarea id="r-obs" placeholder="Opcional">${r?esc(r.obs||''):''}</textarea></div>
+    <div class="modal-actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveRecordatorio(${r?`'${r.id}'`:'null'})">Guardar</button></div>`);
+}
+async function saveRecordatorio(id){
+  const t=$('#r-tarea').value.trim(); if(!t)return alert('Escribí la tarea.');
+  const patch={tarea:t,venc:$('#r-venc').value||null,estado:$('#r-est').value,obs:$('#r-obs').value.trim()};
+  if(id){
+    await dbUpdate('recordatorios',id,patch);
+    Object.assign(DB.recordatorios.find(x=>x.id===id),patch);
+  }else{
+    const row=await dbInsert('recordatorios',patch);
+    DB.recordatorios.unshift({id:row.id,tarea:row.tarea,venc:row.venc,estado:row.estado,obs:row.obs||''});
+  }
+  closeModal();renderRecordatorios();renderDashboard();
+}
 
 /* =========================================================================
    HELPERS
